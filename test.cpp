@@ -1,5 +1,3 @@
-
-
 // Deklaration
 
 class Font {
