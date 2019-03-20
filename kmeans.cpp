@@ -53,7 +53,7 @@ void argmin(Point* p){
     int min = INT_MAX;
     int mitte;
 
-
+...
 }
 
 void initClusters(struct Cluster* clus){
