@@ -56,14 +56,18 @@ struct Set* createSet(int amount)
     return sqrtf(pow(p1->y - p2->y, 2) + pow(p1->x - p2->x, 2));
  }
 
-float argmin(struct Point* p, struct Cluster* clus){
+// berechnet für jeden Punkt den Abstand zu jedem Zentrum -> return: Zentrum mit kleinstem Abstand
+struct Point* argmin(struct Point* p, struct Cluster* clus){
+    struct Point* zentrum;
     int min = INT_MAX;
-    int zentrum;
     for(int i = 0; i < clus->number; i++){
-        float abst = std::fabs(clus->middles[i].x);
+        float abst = dist(p, &clus->middles[i]);
+        if(abst < min){
+            min = abst;
+            zentrum = &clus -> middles[i];
+        }
     }
-
-    return min;
+    return zentrum;
 }
 
 // Cluster mit Zufallszahlen initiieren
@@ -105,7 +109,7 @@ main() {
     test->points[5].x = 3.9;
     test->points[5].y = 2.4;
 
-    // Test Punkte
+    // Test Punktewerte
     cout<< "Points:\nx\ty\n";
     for(int i = 0; i < 5 ; i++){
         cout<< test->points[i].x << "\t" << test->points[i].y << "\n";
@@ -120,8 +124,17 @@ main() {
     for(int i = 0; i < number ; i++){
         cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
     }
-
-    // Test Abstand zwischen zwei Punkten
+    
+    // Test dist
     float abst = dist(&test->points[0], &test->points[4]);
     cout<< "\nAbstand zwischen zwei Punkten:\n" << abst << "\n";
+
+    // Test argmin
+    struct Point* punkt = argmin(&test->points[0], clus);
+    cout<< "\nargmin:\nx:\ty:\n" << punkt->x << "\t" << punkt->y << "\n";
+    float d1 = dist(&test->points[0], &clus->middles[0]);
+    float d2 = dist(&test->points[0], &clus->middles[1]);
+    float d3 = dist(&test->points[0], &clus->middles[2]);
+    cout<< "\nAbstand c0:" << d1 << "\tAbstand c1:" << d2 << "\tAbstand c2:" << d3;
+    
 }
