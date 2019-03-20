@@ -2,6 +2,8 @@
 #include <random>
 #include <stdlib.h>
 #include <limits.h>
+#include <cstdlib>
+#include <tgmath.h>
 using namespace std;
 
 
@@ -40,8 +42,8 @@ struct Set {
 
 struct Set* createSet(int amount)
 {
+    // Allocating space to struct set
     struct Set* set = (struct Set*) malloc(sizeof(struct Set));
-    //Allocating space to struct set
 
     set->amount = amount;
     set->points = (struct Point*) malloc(set->amount * sizeof(struct Point));
@@ -49,28 +51,36 @@ struct Set* createSet(int amount)
     //structures is equal to number of edges 
 }
 
-void argmin(Point* p){
-    int min = INT_MAX;
-    int mitte;
+ // Distanz zwischen zwei Punkten
+ float dist(struct Point * p1, struct Point * p2){
+    return sqrtf(pow(p1->y - p2->y, 2) + pow(p1->x - p2->x, 2));
+ }
 
-...
+float argmin(struct Point* p, struct Cluster* clus){
+    int min = INT_MAX;
+    int zentrum;
+    for(int i = 0; i < clus->number; i++){
+        float abst = std::fabs(clus->middles[i].x);
+    }
+
+    return min;
 }
 
+// Cluster mit Zufallszahlen initiieren
 void initClusters(struct Cluster* clus){
     for(int i = 0; i < clus->number; i++){
         clus->middles[i].x = randomFloat(1,5);
         clus->middles[i].y = randomFloat(1,5);
-
     }
-
 }
 
-void alg(struct Set* set)
+// eigentlicher Algorithmus
+void alg(struct Set* set, struct Cluster* clus)
 {
     bool change = true;
     while(change){
         for(int i = 0; i < set->amount; i++){
-            argmin(&(set->points[i]));
+            argmin(&(set->points[i]), clus);
         }
     }
 }
@@ -95,14 +105,23 @@ main() {
     test->points[5].x = 3.9;
     test->points[5].y = 2.4;
 
+    // Test Punkte
+    cout<< "Points:\nx\ty\n";
+    for(int i = 0; i < 5 ; i++){
+        cout<< test->points[i].x << "\t" << test->points[i].y << "\n";
+    }
+
+    // Liste von Clustern erstellen und initiieren
     struct Cluster* clus = createCluster(number);
     initClusters(clus);
 
+    // Test Clusterwerte
+    cout<< "\nClusters:\nx\ty\n";
     for(int i = 0; i < number ; i++){
         cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
     }
 
-  
-
-
+    // Test Abstand zwischen zwei Punkten
+    float abst = dist(&test->points[0], &test->points[4]);
+    cout<< "\nAbstand zwischen zwei Punkten:\n" << abst << "\n";
 }
