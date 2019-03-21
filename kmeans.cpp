@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <tgmath.h>
 #include <array>
+#include <vector>
 using namespace std;
 
 //random Float erstellen (funktioniert nicht wirklich???)
@@ -39,6 +40,7 @@ struct Set {
     
     // Liste von Punkten
     struct Point* points;
+    struct Point* clusters;
 };
 
 struct Set* createSet(int amount)
@@ -48,9 +50,8 @@ struct Set* createSet(int amount)
 
     set->amount = amount;
     set->points = (struct Point*) malloc(set->amount * sizeof(struct Point));
+    set->clusters = (struct Point*) malloc(set->amount * sizeof(struct Point));
 }
-
-typedef struct Point* TwoDim[][2];
 
 // Distanz zwischen zwei Punkten
 float dist(struct Point* p1, struct Point* p2){
@@ -60,7 +61,7 @@ float dist(struct Point* p1, struct Point* p2){
  // Test dist
 void testDist(struct Point* p1, struct Point* p2){
     float abst = dist(p1, p2);
-    cout<< "\nAbstand zwischen zwei Punkten:\t" << abst << "\n";
+    std::cout<< "\nAbstand zwischen zwei Punkten:\t" << abst << "\n";
 }
 
 // berechnet für jeden Punkt den Abstand zu jedem Zentrum -> return: Zentrum mit kleinstem Abstand
@@ -98,8 +99,16 @@ void printClusters(struct Cluster* clus){
 // Printed ein set von Punkten
 void printSet(struct Set* set){
     cout<< "Points:\nx\ty\n";
-    for(int i = 0; i < 5 ; i++){
+    for(int i = 0; i < set->amount ; i++){
     cout<< set->points[i].x << "\t" << set->points[i].y << "\n";
+    }
+}
+
+// Printed ein Array
+void printArr(struct Set* set){
+    cout<< "Points:\nx\ty\n";
+    for(int i = 0; i < set->amount; i++){
+        cout<< set->points[i].x << "\t" <<  set->points[i].y << "\t" << set->clusters[i].x << "\t" << set->clusters[i].y << "\n";
     }
 }
 
@@ -117,23 +126,19 @@ void initClusters(struct Cluster* clus){
 }
 
 // Array erstellen Punkte mit ihren nächsten Clustern
-vector<vector<struct Point* >> createArr(struct Set* set, struct Cluster* clus){
-    vector<vector<struct Point*>> ergarr(set->amount, std::vector<struct Point*>(2));
+void createArr(struct Set* set, struct Cluster* clus){
     for(int i = 0; i < set->amount; i++){
-        ergarr[i][0] = &set->points[i];
-        ergarr[i][1] = argmin(ergarr[i][0], clus);
+        set->clusters[i] = *argmin(&set->points[i], clus);
     }
-    return ergarr;
 }
 
-
 // Summiert für jedes Cluster die zugehörigen Punkte auf + Summe der Kluster Skalieren
-void sumclus(vector<vector<struct Point*>>ergarr, int arrlen, struct Cluster* clus){
+void sumclus(vector<vector<struct Point*>> ergarr, struct Cluster* clus){
     for(int i = 0; i < clus->number; i++){
         float sumx = 0;
         float sumy = 0;
         int anzahlP = 0;
-        for(int j = 0; j < arrlen; j++){
+        for(int j = 0; j < ergarr.size(); j++){
             if(ergarr[j][1] == &clus->middles[i]){
                 anzahlP += 1;
                 sumx += ergarr[j][0]->x;
@@ -146,14 +151,17 @@ void sumclus(vector<vector<struct Point*>>ergarr, int arrlen, struct Cluster* cl
            } */
         }
         // neue Cluster: skaliert durch # an zugehörigen Punkten (wenn keine Punkte dazugehören -> 0/1 = 0)
-        if (anzahlP == 0)
-            anzahlP = 1;
+        if (anzahlP == 0){
+            clus->middles[i].x = 0;
+            clus->middles[i].y = 0;
+        } else {
         clus->middles[i].x = sumx/anzahlP;
         clus->middles[i].y = sumy/anzahlP;
+        }
         cout<< "\nAnzahl der zugehörigen Punkte:\t" << anzahlP << " \tneue Cluster Werte:\t" << clus->middles[i].x << "\t" << clus->middles[i].y; 
     }
 }
-
+/*
 
 // eigentlicher Algorithmus
 void alg(struct Set* set, struct Cluster* clus)
@@ -177,10 +185,10 @@ void alg(struct Set* set, struct Cluster* clus)
 
         //Cluster neu berechnen (Summe über alle Punkte, die zum gleichen Cluster gehören)
         // + Summe der Kluster Skalieren
-        sumclus(ergarr, set->amount, clus);
+        sumclus(ergarr, clus);
     }
 }
-
+*/
 
 // Punkte erstellen
 void createPoints(struct Set* set){
@@ -216,8 +224,52 @@ main() {
     printClusters(clus);
 
     // k-means Algorithmus aufrufen
-   // alg(set, clus);
+    //alg(set, clus);
 
     // Ergebnisse der Cluster printen
     printClusters(clus);
+    createArr(set, clus);
+    printArr(set);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+// Array erstellen Punkte mit ihren nächsten Clustern
+vector<vector<struct Point* >> createArr(struct Set* set, struct Cluster* clus){
+    vector<vector<struct Point*>> ergarr(set->amount, std::vector<struct Point*>(2));
+    vector<vector<struct Point*>>::const_iterator i;
+    vector<struct Point*>::const_iterator j;
+    for(i = ergarr.begin(); i != ergarr.end(); ++i){
+        (*i).at(0) = &set->points[i];
+        ergarr.at(i).at(1) = argmin(ergarr[i][0], clus);
+    }
+    return ergarr;
+}
+
+// Printed ein Array
+void printArr(vector<vector<struct Point*>> ergarr){
+    vector<vector<struct Point*>>::const_iterator i;
+    vector<struct Point*>::const_iterator j;
+    cout<< "Points:\nx\ty\n";
+    for(i = ergarr.begin(); i != ergarr.end(); ++i){
+        for(j = i->begin(); j != i->end(); ++j){
+            cout<< (*j)->x << "\t" << (*j)->y;
+        }
+    }
+}
+
+*/
