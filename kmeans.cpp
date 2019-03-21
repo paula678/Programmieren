@@ -54,7 +54,7 @@ struct Set* createSet(int amount)
 }
 
  // Distanz zwischen zwei Punkten
- float dist(struct Point * p1, struct Point * p2){
+ float dist(struct Point* p1, struct Point* p2){
     return sqrtf(pow(p1->y - p2->y, 2) + pow(p1->x - p2->x, 2));
  }
 
@@ -85,12 +85,15 @@ void initClusters(struct Cluster* clus){
     }
 }
 
+// Summiert für jedes Cluster die zugehörigen Punkte auf + Summe der Kluster Skalieren
 void sumclus(struct Point* ergarr[][2], int arrlen, struct Cluster* clus){
     for(int i = 0; i < clus->number; i++){
         float sumx = 0;
         float sumy = 0;
+        int anzahlP = 0;
         for(int j = 0; j < arrlen; j++){
             if(ergarr[j][1] == &clus->middles[i]){
+                anzahlP += 1;
                 sumx += ergarr[j][0]->x;
                 sumy += ergarr[j][0]->y;
                 // Print zu welchem Kluster ein Punkt gehört
@@ -100,8 +103,12 @@ void sumclus(struct Point* ergarr[][2], int arrlen, struct Cluster* clus){
                 cout<< "\n"<< j << "\tfalse ";
            } */
         }
-        clus->middles[i].x = sumx;
-        clus->middles[i].y = sumy;
+        // neue Cluster: skaliert durch # an zugehörigen Punkten (wenn keine Punkte dazugehören -> 0/1 = 0)
+        if (anzahlP == 0)
+            anzahlP = 1;
+        clus->middles[i].x = sumx/anzahlP;
+        clus->middles[i].y = sumy/anzahlP;
+        cout<< "\nAnzahl der zugehörigen Punkte:\t" << anzahlP << " \tneue Cluster Werte:\t" << clus->middles[i].x << "\t" << clus->middles[i].y; 
     }
 }
 
@@ -129,6 +136,10 @@ void alg(struct Set* set, struct Cluster* clus)
         }
 
         //Cluster neu berechnen (Summe über alle Punkte, die zum gleichen Cluster gehören)
+        // + Summe der Kluster Skalieren
+        sumclus(ergarr, set->amount, clus);
+
+        //changec noch richtig implementieren; testen; tests schreiben
     }
 }
 
@@ -194,8 +205,5 @@ main() {
     for(int i = 0; i < number ; i++){
         cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
     }
-
-
-
-    
+ 
 }
