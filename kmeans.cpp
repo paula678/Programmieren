@@ -30,8 +30,8 @@ struct Cluster {
 struct Cluster* createCluster(int number){
      //Allocating space to struct Cluster and Points
     struct Cluster* c = (struct Cluster*) malloc (sizeof(struct Cluster));
-    c->middles = (struct Point*) malloc(c->number * sizeof(struct Point));
     c->number = number;
+    c->middles = (struct Point*) malloc(c->number * sizeof(struct Point));
 };
 
 // Menge an Punkten
@@ -49,14 +49,18 @@ struct Set* createSet(int amount)
 
     set->amount = amount;
     set->points = (struct Point*) malloc(set->amount * sizeof(struct Point));
-    //creating Edge type structures inside Graph structure, the number of edge type
-    //structures is equal to number of edges 
 }
 
- // Distanz zwischen zwei Punkten
- float dist(struct Point* p1, struct Point* p2){
+// Distanz zwischen zwei Punkten
+float dist(struct Point* p1, struct Point* p2){
     return sqrtf(pow(p1->y - p2->y, 2) + pow(p1->x - p2->x, 2));
  }
+
+ // Test dist
+void testDist(struct Point* p1, struct Point* p2){
+    float abst = dist(p1, p2);
+    cout<< "\nAbstand zwischen zwei Punkten:\t" << abst << "\n";
+}
 
 // berechnet für jeden Punkt den Abstand zu jedem Zentrum -> return: Zentrum mit kleinstem Abstand
 struct Point* argmin(struct Point* p, struct Cluster* clus){
@@ -72,6 +76,32 @@ struct Point* argmin(struct Point* p, struct Cluster* clus){
     return zentrum;
 }
 
+    // Test argmin
+void testArgmin(struct Point* p, struct Cluster* clus){
+    struct Point* punkt = argmin(p, clus);
+    cout<< "\n Test Argmin: \n";
+    for(int i = 0; i < clus->number; i++){
+        float d = dist(p, &clus->middles[i]);
+        cout<< "Abstand:\t" << d << "\n";
+    }
+}
+
+// Printed Cluster
+void printClusters(struct Cluster* clus){
+    cout<< "\nClusters:\nx\ty\n";
+    for(int i = 0; i < clus->number; i++){
+        cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
+    }
+}
+
+// Printed ein set von Punkten
+void printSet(struct Set* set){
+    cout<< "Points:\nx\ty\n";
+    for(int i = 0; i < 5 ; i++){
+    cout<< set->points[i].x << "\t" << set->points[i].y << "\n";
+    }
+}
+
 // Cluster mit Zufallszahlen initiieren
 void initClusters(struct Cluster* clus){
     clus->middles[0].x = 1.1;
@@ -84,6 +114,17 @@ void initClusters(struct Cluster* clus){
     clus->middles[i].y = clus->middles[i-1].x + 0.5;
     }
 }
+
+// Array erstellen Punkte mit ihren nächsten clustern
+void createArr(struct Set* set, struct Cluster* clus){
+    struct Point* ergarr[set->amount][2];
+    for(int i = 0; i < set->amount; i++){
+        ergarr[i][0] = &set->points[i];
+        ergarr[i][1] = argmin(ergarr[i][0], clus);
+    }
+    int arrlen = sizeof(ergarr)/sizeof(ergarr[0]);
+}
+
 
 // Summiert für jedes Cluster die zugehörigen Punkte auf + Summe der Kluster Skalieren
 void sumclus(struct Point* ergarr[][2], int arrlen, struct Cluster* clus){
@@ -138,72 +179,45 @@ void alg(struct Set* set, struct Cluster* clus)
         //Cluster neu berechnen (Summe über alle Punkte, die zum gleichen Cluster gehören)
         // + Summe der Kluster Skalieren
         sumclus(ergarr, set->amount, clus);
-
-        //changec noch richtig implementieren; testen; tests schreiben
     }
 }
 
+// Punkte erstellen
+void createPoints(struct Set* set){
+    set->points[0].x = 1;
+    set->points[0].y = 2;
+    set->points[1].x = 2;
+    set->points[1].y = 3;
+    set->points[2].x = 3;
+    set->points[2].y = 4;
+    set->points[3].x = 6;
+    set->points[3].y = 6;
+    set->points[4].x = 9;
+    set->points[4].y = 5;
+    set->points[5].x = 8;
+    set->points[5].y = 8;
+}
 
 main() {
-    // Anzahl an Punkten; leere Liste erstellen
-    int number = 3;
-    struct Set* test  = createSet(5);
+    // # Punkte -> leere Liste von Punkten erstellen
+    int amountPoints = 5;
+    struct Set* set  = createSet(5);
 
-    // Punkte erstellen, an Liste anhängen
-    test->points[0].x = 1;
-    test->points[0].y = 2;
-    test->points[1].x = 2;
-    test->points[1].y = 3;
-    test->points[2].x = 3;
-    test->points[2].y = 4;
-    test->points[3].x = 6;
-    test->points[3].y = 6;
-    test->points[4].x = 9;
-    test->points[4].y = 5;
-    test->points[5].x = 8;
-    test->points[5].y = 8;
+    // Punkte initiieren; Printen
+    createPoints(set);
+    printSet(set);
 
-    // Test Punktewerte
-    cout<< "Points:\nx\ty\n";
-    for(int i = 0; i < 5 ; i++){
-        cout<< test->points[i].x << "\t" << test->points[i].y << "\n";
-    }
+    // # Cluster -> leere Liste von Clustern erstellen
+    int numberClus = 3;
+    struct Cluster* clus = createCluster(numberClus);
 
-    // Liste von Clustern erstellen und initiieren
-    struct Cluster* clus = createCluster(number);
+    // Cluster initiieren; Printen
     initClusters(clus);
+    printClusters(clus);
 
-    // Test Clusterwerte
-    cout<< "\nClusters:\nx\ty\n";
-    for(int i = 0; i < number ; i++){
-        cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
-    }
-  /*
-    // Test dist
-    float abst = dist(&test->points[0], &test->points[4]);
-    cout<< "\nAbstand zwischen zwei Punkten:\n" << abst << "\n";
-*/
-    // Test argmin
- /*   struct Point* punkt = argmin(&test->points[0], clus);
-    cout<< "\nargmin:\nx:\ty:\n" << punkt->x << "\t" << punkt->y << "\n";
-    float d1 = dist(&test->points[0], &clus->middles[0]);
-    float d2 = dist(&test->points[0], &clus->middles[1]);
-    float d3 = dist(&test->points[0], &clus->middles[2]);
-    cout<< "\nAbstand c0:" << d1 << "\tAbstand c1:" << d2 << "\tAbstand c2:" << d3;
-*/
-    // Test sumclus 
-    struct Point* ergarr[test->amount][2];
-    for(int i = 0; i < test->amount; i++){
-        ergarr[i][0] = &test->points[i];
-        ergarr[i][1] = argmin(ergarr[i][0], clus);
-    }
-    int arrlen = sizeof(ergarr)/sizeof(ergarr[0]);
-    sumclus(ergarr, arrlen, clus);
+    // k-means Algorithmus aufrufen
+    alg(set, clus);
 
-    // Test Clusterwerte
-    cout<< "\nClusters:\nx\ty\n";
-    for(int i = 0; i < number ; i++){
-        cout<< clus->middles[i].x << "\t" << clus->middles[i].y << "\n";
-    }
- 
+    // Ergebnisse der Cluster printen
+    printClusters(clus);
 }
