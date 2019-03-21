@@ -7,7 +7,6 @@
 #include <array>
 using namespace std;
 
-
 //random Float erstellen (funktioniert nicht wirklich???)
 float randomFloat(float min, float max) {
     return (min + 1) + (((float) rand()) / (float) RAND_MAX) * (max - (min + 1)); 
@@ -50,6 +49,8 @@ struct Set* createSet(int amount)
     set->amount = amount;
     set->points = (struct Point*) malloc(set->amount * sizeof(struct Point));
 }
+
+typedef struct Point* TwoDim[][2];
 
 // Distanz zwischen zwei Punkten
 float dist(struct Point* p1, struct Point* p2){
@@ -115,19 +116,19 @@ void initClusters(struct Cluster* clus){
     }
 }
 
-// Array erstellen Punkte mit ihren nächsten clustern
-void createArr(struct Set* set, struct Cluster* clus){
-    struct Point* ergarr[set->amount][2];
+// Array erstellen Punkte mit ihren nächsten Clustern
+vector<vector<struct Point* >> createArr(struct Set* set, struct Cluster* clus){
+    vector<vector<struct Point*>> ergarr(set->amount, std::vector<struct Point*>(2));
     for(int i = 0; i < set->amount; i++){
         ergarr[i][0] = &set->points[i];
         ergarr[i][1] = argmin(ergarr[i][0], clus);
     }
-    int arrlen = sizeof(ergarr)/sizeof(ergarr[0]);
+    return ergarr;
 }
 
 
 // Summiert für jedes Cluster die zugehörigen Punkte auf + Summe der Kluster Skalieren
-void sumclus(struct Point* ergarr[][2], int arrlen, struct Cluster* clus){
+void sumclus(vector<vector<struct Point*>>ergarr, int arrlen, struct Cluster* clus){
     for(int i = 0; i < clus->number; i++){
         float sumx = 0;
         float sumy = 0;
@@ -153,14 +154,12 @@ void sumclus(struct Point* ergarr[][2], int arrlen, struct Cluster* clus){
     }
 }
 
+
 // eigentlicher Algorithmus
 void alg(struct Set* set, struct Cluster* clus)
 {
-    // Ergebnisarray: zu jedem Pounkt das zugehörige Cluster; initialisierung -> Cluster: null
-    struct Point* ergarr[set->amount][2];
-    for(int i = 0; i < set->amount; i++){
-        ergarr[0][i] = &set->points[i];
-    }
+    // Ergebnisarray: zu jedem Punkt das zugehörige Cluster; initialisierung -> Cluster: null
+    vector<vector<struct Point*>> ergarr = createArr(set, clus);
     bool changec = true;
 
     // solange sich die Cluster verändern
@@ -181,6 +180,7 @@ void alg(struct Set* set, struct Cluster* clus)
         sumclus(ergarr, set->amount, clus);
     }
 }
+
 
 // Punkte erstellen
 void createPoints(struct Set* set){
@@ -216,7 +216,7 @@ main() {
     printClusters(clus);
 
     // k-means Algorithmus aufrufen
-    alg(set, clus);
+   // alg(set, clus);
 
     // Ergebnisse der Cluster printen
     printClusters(clus);
