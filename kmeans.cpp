@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <tgmath.h>
 #include <array>
-#include <vector>
 using namespace std;
 
 //random Float erstellen (funktioniert nicht wirklich???)
@@ -40,7 +39,7 @@ struct Set {
     
     // Liste von Punkten
     struct Point* points;
-    struct Point* clusters;
+    struct Point** clusters;
 };
 
 struct Set* createSet(int amount)
@@ -50,7 +49,7 @@ struct Set* createSet(int amount)
 
     set->amount = amount;
     set->points = (struct Point*) malloc(set->amount * sizeof(struct Point));
-    set->clusters = (struct Point*) malloc(set->amount * sizeof(struct Point));
+    set->clusters = (struct Point**) malloc(set->amount * sizeof(struct Point*));
 }
 
 // Distanz zwischen zwei Punkten
@@ -98,17 +97,9 @@ void printClusters(struct Cluster* clus){
 
 // Printed ein set von Punkten
 void printSet(struct Set* set){
-    cout<< "Points:\nx\ty\n";
+    cout<< "\nPoints:\t\tClusters:\nx\ty\tx\ty\n";
     for(int i = 0; i < set->amount ; i++){
-    cout<< set->points[i].x << "\t" << set->points[i].y << "\n";
-    }
-}
-
-// Printed ein Array
-void printArr(struct Set* set){
-    cout<< "Points:\nx\ty\n";
-    for(int i = 0; i < set->amount; i++){
-        cout<< set->points[i].x << "\t" <<  set->points[i].y << "\t" << set->clusters[i].x << "\t" << set->clusters[i].y << "\n";
+    cout<< set->points[i].x << "\t" << set->points[i].y << "\t" << set->clusters[i]->x << "\t" << set->clusters[i] << "\n";
     }
 }
 
@@ -128,25 +119,26 @@ void initClusters(struct Cluster* clus){
 // Array erstellen Punkte mit ihren nächsten Clustern
 void createArr(struct Set* set, struct Cluster* clus){
     for(int i = 0; i < set->amount; i++){
-        set->clusters[i] = *argmin(&set->points[i], clus);
+      set->clusters[i] = argmin(&set->points[i], clus);
     }
 }
 
 // Summiert für jedes Cluster die zugehörigen Punkte auf + Summe der Kluster Skalieren
-void sumclus(vector<vector<struct Point*>> ergarr, struct Cluster* clus){
+void sumclus(struct Set* set, struct Cluster* clus){
     for(int i = 0; i < clus->number; i++){
         float sumx = 0;
         float sumy = 0;
         int anzahlP = 0;
-        for(int j = 0; j < ergarr.size(); j++){
-            if(ergarr[j][1] == &clus->middles[i]){
+        for(int j = 0; j < set->amount; j++){
+            cout<< "\nWerte: "<< j << ": " << set->clusters[j] << "\t" <<&clus->middles[i];
+            if(set->clusters[j] == &clus->middles[i]){
                 anzahlP += 1;
-                sumx += ergarr[j][0]->x;
-                sumy += ergarr[j][0]->y;
+                sumx += set->points[j].x;
+                sumy += set->points[j].y;
                 // Print zu welchem Kluster ein Punkt gehört
-              //  cout<< "\n"<< j << "\tSumme: " << sumx << "\t" << sumy << "\t" << argmin(ergarr[j][0],clus)->x << "\t" <<  argmin(ergarr[j][0],clus)->y << "\t" << clus->middles[i].x;
+             //  cout<< "\n"<< j << "\tSumme: " << sumx << "\t" << sumy << "\t" << argmin(&set->points[j],clus)->x << "\t" <<  argmin(&set->points[j],clus)->y << "\t" << clus->middles[i].x;
             } 
-        /*   else {
+       /*    else {
                 cout<< "\n"<< j << "\tfalse ";
            } */
         }
@@ -161,13 +153,10 @@ void sumclus(vector<vector<struct Point*>> ergarr, struct Cluster* clus){
         cout<< "\nAnzahl der zugehörigen Punkte:\t" << anzahlP << " \tneue Cluster Werte:\t" << clus->middles[i].x << "\t" << clus->middles[i].y; 
     }
 }
-/*
 
 // eigentlicher Algorithmus
 void alg(struct Set* set, struct Cluster* clus)
 {
-    // Ergebnisarray: zu jedem Punkt das zugehörige Cluster; initialisierung -> Cluster: null
-    vector<vector<struct Point*>> ergarr = createArr(set, clus);
     bool changec = true;
 
     // solange sich die Cluster verändern
@@ -176,19 +165,21 @@ void alg(struct Set* set, struct Cluster* clus)
 
         // für jeden Punkt das Cluster mit dem geringsten Abstand berechnen
         for(int i = 0; i < set->amount; i++){
-            Point* minclus = argmin(&set->points[i], clus);
-            if (minclus != ergarr[1][i]){
-                ergarr[1][i] = minclus;
+            struct Point* minclus = argmin(&set->points[i], clus);
+            if (minclus != set->clusters[i]){
+               set->clusters[i] = minclus;
                 changec = true;
             }
         }
 
         //Cluster neu berechnen (Summe über alle Punkte, die zum gleichen Cluster gehören)
         // + Summe der Kluster Skalieren
-        sumclus(ergarr, clus);
+        sumclus(set, clus);
     }
+    // Ergebnisse der Cluster printen
+    cout<< "Die Ergebniscluster sind:\n";
+    printClusters(clus);
 }
-*/
 
 // Punkte erstellen
 void createPoints(struct Set* set){
@@ -207,69 +198,23 @@ void createPoints(struct Set* set){
 }
 
 main() {
-    // # Punkte -> leere Liste von Punkten erstellen
-    int amountPoints = 5;
-    struct Set* set  = createSet(5);
-
-    // Punkte initiieren; Printen
-    createPoints(set);
-    printSet(set);
-
     // # Cluster -> leere Liste von Clustern erstellen
     int numberClus = 3;
     struct Cluster* clus = createCluster(numberClus);
 
-    // Cluster initiieren; Printen
+    // Cluster initiieren; Printen; den Punkten zuordnen -> evtl in alg?????
     initClusters(clus);
     printClusters(clus);
 
-    // k-means Algorithmus aufrufen
-    //alg(set, clus);
+    // # Punkte -> leere Liste von Punkten erstellen
+    int amountPoints = 5;
+    struct Set* set  = createSet(5);
 
-    // Ergebnisse der Cluster printen
-    printClusters(clus);
+    // Punkte initiieren mit zugehörigen Clustern; Printen
+    createPoints(set);
     createArr(set, clus);
-    printArr(set);
+    printSet(set);
+
+    // k-means Algorithmus
+    alg(set, clus);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-// Array erstellen Punkte mit ihren nächsten Clustern
-vector<vector<struct Point* >> createArr(struct Set* set, struct Cluster* clus){
-    vector<vector<struct Point*>> ergarr(set->amount, std::vector<struct Point*>(2));
-    vector<vector<struct Point*>>::const_iterator i;
-    vector<struct Point*>::const_iterator j;
-    for(i = ergarr.begin(); i != ergarr.end(); ++i){
-        (*i).at(0) = &set->points[i];
-        ergarr.at(i).at(1) = argmin(ergarr[i][0], clus);
-    }
-    return ergarr;
-}
-
-// Printed ein Array
-void printArr(vector<vector<struct Point*>> ergarr){
-    vector<vector<struct Point*>>::const_iterator i;
-    vector<struct Point*>::const_iterator j;
-    cout<< "Points:\nx\ty\n";
-    for(i = ergarr.begin(); i != ergarr.end(); ++i){
-        for(j = i->begin(); j != i->end(); ++j){
-            cout<< (*j)->x << "\t" << (*j)->y;
-        }
-    }
-}
-
-*/
