@@ -7,7 +7,7 @@
 #include <array>
 using namespace std;
 
-//random Float erstellen (funktioniert nicht wirklich???)
+//random Float erstellen
 float randomFloat(float min, float max) {
     return (min + 1) + (((float) rand()) / (float) RAND_MAX) * (max - (min + 1)); 
 }
@@ -96,23 +96,26 @@ void printClusters(struct Cluster* clus){
 }
 
 // Printed ein set von Punkten
+void printPoints(struct Set* set){
+    cout<< "\nPoints:\nx\ty\n";
+    for(int i = 0; i < set->amount ; i++){
+    cout<< set->points[i].x << "\t" << set->points[i].y << "\n";
+    }
+}
+
+// Printed ein set von Punkten
 void printSet(struct Set* set){
     cout<< "\nPoints:\t\tClusters:\nx\ty\tx\ty\n";
     for(int i = 0; i < set->amount ; i++){
-    cout<< set->points[i].x << "\t" << set->points[i].y << "\t" << set->clusters[i]->x << "\t" << set->clusters[i] << "\n";
+    cout<< set->points[i].x << "\t" << set->points[i].y << "\t" << set->clusters[i]->x << "\t" << set->clusters[i]->y << "\n";
     }
 }
 
 // Cluster mit Zufallszahlen initiieren
 void initClusters(struct Cluster* clus){
-    clus->middles[0].x = 1.1;
-    clus->middles[0].y = 1.1;
-
-    for(int i = 1; i < clus->number; i++){
-     //   clus->middles[i].x = randomFloat(1,5);
-     //   clus->middles[i].y = randomFloat(1,5);
-    clus->middles[i].x = clus->middles[i-1].x + 0.5;
-    clus->middles[i].y = clus->middles[i-1].x + 0.5;
+    for(int i = 0; i < clus->number; i++){
+        clus->middles[i].x = randomFloat(0,11);
+        clus->middles[i].y = randomFloat(1,11);
     }
 }
 
@@ -130,7 +133,7 @@ void sumclus(struct Set* set, struct Cluster* clus){
         float sumy = 0;
         int anzahlP = 0;
         for(int j = 0; j < set->amount; j++){
-            cout<< "\nWerte: "<< j << ": " << set->clusters[j] << "\t" <<&clus->middles[i];
+       //     cout<< "\nWerte: "<< j << ": " << set->clusters[j] << "\t" <<&clus->middles[i];
             if(set->clusters[j] == &clus->middles[i]){
                 anzahlP += 1;
                 sumx += set->points[j].x;
@@ -142,6 +145,7 @@ void sumclus(struct Set* set, struct Cluster* clus){
                 cout<< "\n"<< j << "\tfalse ";
            } */
         }
+
         // neue Cluster: skaliert durch # an zugehörigen Punkten (wenn keine Punkte dazugehören -> 0/1 = 0)
         if (anzahlP == 0){
             clus->middles[i].x = 0;
@@ -150,7 +154,7 @@ void sumclus(struct Set* set, struct Cluster* clus){
         clus->middles[i].x = sumx/anzahlP;
         clus->middles[i].y = sumy/anzahlP;
         }
-        cout<< "\nAnzahl der zugehörigen Punkte:\t" << anzahlP << " \tneue Cluster Werte:\t" << clus->middles[i].x << "\t" << clus->middles[i].y; 
+        cout<< "\nAnzahl zugehöriger Punkte zu Cluster: " << i << " : \t" << anzahlP << " \tneue Cluster Werte:\t" << clus->middles[i].x << "\t" << clus->middles[i].y << "\n"; 
     }
 }
 
@@ -177,29 +181,63 @@ void alg(struct Set* set, struct Cluster* clus)
         sumclus(set, clus);
     }
     // Ergebnisse der Cluster printen
-    cout<< "Die Ergebniscluster sind:\n";
+    cout<< "\nDie Ergebniscluster sind:\n";
     printClusters(clus);
+    printSet(set);
 }
 
-// Punkte erstellen
+// Array erstellen Punkte mit ihren nächsten Clustern
+void hi(struct Set* set, struct Cluster* clus){
+    for(int i = 0; i < set->amount; i++){
+      set->clusters[i] = argmin(&set->points[i], clus);
+    }
+}
+
+// Zufallspunkte erstellen
+void createrndmPoints(struct Set* set, int from, int to){
+    for(int i = 0; i < set->amount; i++){
+    set->points[i].x = randomFloat(from, to);
+    set->points[i].y = randomFloat(from, to);
+    }
+}
+
+// Test Punkte erstellen
 void createPoints(struct Set* set){
-    set->points[0].x = 1;
-    set->points[0].y = 2;
-    set->points[1].x = 2;
-    set->points[1].y = 3;
-    set->points[2].x = 3;
-    set->points[2].y = 4;
-    set->points[3].x = 6;
-    set->points[3].y = 6;
-    set->points[4].x = 9;
-    set->points[4].y = 5;
-    set->points[5].x = 8;
-    set->points[5].y = 8;
+    set->points[0].x = 2;
+    set->points[0].y = 1;
+    set->points[1].x = 4;
+    set->points[1].y = 1;
+    set->points[2].x = 1;
+    set->points[2].y = 2;
+    set->points[3].x = 3;
+    set->points[3].y = 2;
+    set->points[4].x = 2;
+    set->points[4].y = 3;
+    set->points[5].x = 3;
+    set->points[5].y = 3;
+    set->points[6].x = 2;
+    set->points[6].y = 4;
+    set->points[7].x = 7;
+    set->points[7].y = 6;
+    set->points[8].x = 8;
+    set->points[8].y = 6;
+    set->points[9].x = 10;
+    set->points[9].y = 6;
+    set->points[10].x = 10;
+    set->points[10].y = 7;
+    set->points[11].x = 7;
+    set->points[11].y = 8;
+    set->points[12].x = 9;
+    set->points[12].y = 8;
+    set->points[13].x = 8;
+    set->points[13].y = 9;
+    set->points[14].x = 11;
+    set->points[14].y = 9;
 }
 
 main() {
     // # Cluster -> leere Liste von Clustern erstellen
-    int numberClus = 3;
+    int numberClus = 2;
     struct Cluster* clus = createCluster(numberClus);
 
     // Cluster initiieren; Printen; den Punkten zuordnen -> evtl in alg?????
@@ -207,13 +245,15 @@ main() {
     printClusters(clus);
 
     // # Punkte -> leere Liste von Punkten erstellen
-    int amountPoints = 5;
-    struct Set* set  = createSet(5);
+    int amountPoints = 15;
+    struct Set* set  = createSet(amountPoints);
 
     // Punkte initiieren mit zugehörigen Clustern; Printen
-    createPoints(set);
-    createArr(set, clus);
-    printSet(set);
+   // createPoints(set);
+    int from = 0;
+    int to = 11;
+    createrndmPoints(set, from, to);
+    printPoints(set);
 
     // k-means Algorithmus
     alg(set, clus);
