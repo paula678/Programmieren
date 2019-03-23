@@ -133,15 +133,14 @@ void sumclus(struct Set* set, struct Cluster* clus){
         float sumy = 0;
         int anzahlP = 0;
         for(int j = 0; j < set->amount; j++){
-       //     cout<< "\nWerte: "<< j << ": " << set->clusters[j] << "\t" <<&clus->middles[i];
             if(set->clusters[j] == &clus->middles[i]){
                 anzahlP += 1;
                 sumx += set->points[j].x;
                 sumy += set->points[j].y;
                 // Print zu welchem Kluster ein Punkt gehört
-             //  cout<< "\n"<< j << "\tSumme: " << sumx << "\t" << sumy << "\t" << argmin(&set->points[j],clus)->x << "\t" <<  argmin(&set->points[j],clus)->y << "\t" << clus->middles[i].x;
+             //  cout<< "\n"<< j << "\tSumme: " << sumx << "\t" << sumy << "\t" << argmin(&set->points[j],clus)->x << "\t" <<  argmin(&set->points[j],clus)->y << "\t" << clus->middles[i]->x;
             } 
-       /*    else {
+          /* else {
                 cout<< "\n"<< j << "\tfalse ";
            } */
         }
@@ -158,7 +157,7 @@ void sumclus(struct Set* set, struct Cluster* clus){
     }
 }
 
-// eigentlicher Algorithmus
+//  Algk-means algorithmus
 void alg(struct Set* set, struct Cluster* clus)
 {
     bool changec = true;
