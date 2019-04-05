@@ -77,7 +77,7 @@ void KMeans::testArgmin(struct Point* p, vector<struct Point> &clus){
 void KMeans::printClusters(vector<struct Point> &clus){
     cout<< "\nClusters:\nx\ty\n";
     for(const auto &i: clus){
-        cout<< i.x << "\t" << &i << "\n";
+        cout<< i.x << "\t" << i.y << "\n";
     }
 }
 
