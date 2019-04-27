@@ -24,21 +24,23 @@
 
 
 main() {
- /*   
+    
     // KMeans initialisieren
     cout<< "Geben Sie die höchste Anzahl an Clustern ein:";
     int numberClus;
     cin>> numberClus;
-    //numberClus = 2;
+   // numberClus = 2;
 
     cout<< "Geben Sie die höchste Anzahl an Punkten ein:";
     int amountPoints;
     cin>> amountPoints;
+  // amountPoints = 1000;
 
     //Anzahl an Durchläufen für Zeit messen
     int iterations;
     cout<< "Geben Sie die Anzahl an Durchläufen ein:";
     cin>> iterations;
+ // iterations = 1;
     
     int min = INT16_MAX;
     int max = INT16_MIN;
@@ -54,27 +56,23 @@ main() {
         // Range der Punkte
         int from = 0;
         int to = 11;
-        kmeans.init(from, to);
+        int dimension = 2;
+        kmeans.init(from, to, dimension);
 
         //Stop the Timer
         STOP_TIMER
         avg += stop;
         if(stop < min)
             min = stop;
-        else if(stop > max)
+        if(stop > max)
             max = stop;
     }
     avg = avg/iterations;
-    cout<< "min time: " << min << " ms\tmax time: " << max << " ms\tavg time: " << avg << " ms" << endl; 
-*/
+    cout<< "\nmin time: " << min << " ms\tmax time: " << max << " ms\tavg time: " << avg << " ms" << endl; 
 
- int n = 10;
-    PerfEvent e;
-    e.startCounters();
-    for(int i = 0; i < n; i++){
-        std::cout<< "hi";
-    }
-    e.stopCounters();
-    std::cout<< std:: endl;
-    
+
 }
+
+// Tupel - Zeit/s
+// # Cluster Zeit/s
+// lin/log hochgehen - jeden Wert 1 - 10 mal messen

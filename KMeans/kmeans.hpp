@@ -13,35 +13,33 @@ class KMeans {
 
     KMeans (int c, int p);
 
-  //  initPoints(std::vector<Point> p);
-
     void assignClus(vector<vector<struct Point*> > &ergset, vector<struct Point> &clus);
 
     float randomFloat(float min, float max);
 
-    void  initClusters(vector<struct Point> &clus);
+    void  initClusters(vector<vector<float>> &clus);
 
-    float dist(struct Point* p1, struct Point* p2);
+    float dist(vector<float> &p1, vector<float> &p2);
 
-    void testDist(struct Point* p1, struct Point* p2);
+    void testDist(vector<float> &p1, vector<float> &p2);
 
-    struct Point* argmin(struct Point* p, vector<struct Point> &clus);
+    vector<float> * argmin(vector<float> &p, vector<vector<float> > &clus);
 
-    void testArgmin(struct Point* p, vector<struct Point> &clus);
+    void testArgmin(vector<float> &p, vector<vector<float> > &clus);
   
-    void printClusters(vector<struct Point> &clus);
+    void printPoints(vector<vector<float>> &clus);
 
-    void printSet(vector<vector<struct Point*> > &ergarr);
+    void printSet(vector<vector<float> * > &ergarr);
 
-    void sumclus(vector<vector<struct Point*> > &ergset, vector<struct Point> &clu);
+    void initSet(vector<vector<float> * > &ergset);
 
-    void alg(vector<vector<struct Point*> > &ergset, vector<struct Point> &clus);
+    void sumclus(vector<vector<float> * > &ergset, vector<vector<float> > &clus, vector<vector<float> > &points);
 
-    void createrndmPoints(vector<vector<struct Point*> > &ergset, int from, int to, vector<struct Point> &points);
+    void alg(vector<vector<float> * > &ergset, vector<vector<float> > &clus, vector<vector<float> > &points);
 
-    void createPoints(vector<vector<struct Point*> > &ergset, vector<struct Point> &points);
+    void createrndmPoints(int from, int to, vector<vector<float> > &points);
 
-    void init(int from, int to);
+    void init(int from, int to, int dimension);
 
 };
 
