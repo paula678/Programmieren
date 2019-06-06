@@ -8,7 +8,10 @@
 using namespace std;
 
 
-RTree::RTree(int max_children) : max_Children(max_children){ min_Children = max_children * 0.5; }
+RTree::RTree(int max_children) : max_Children(max_children), reins(true) { 
+    min_Children = max_children * 0.5; 
+    p = 0.3 * max_Children;
+}
 
 //random Float erstellen
 float RTree::randomFloat(float min, float max) {
@@ -16,26 +19,25 @@ float RTree::randomFloat(float min, float max) {
 }
 
 
-// create random Bounding Boxes
-vector<struct BoundingBox> RTree::createBB(int amount, float from, float to, int dimensions){
-    vector<struct BoundingBox> data;
-    for(int i = 0; i < amount; i++){
-        // create a vector for the mins
-        float fmin = randomFloat(from, to);
-        vector<float> minVec(fmin, fmin);
-        vector<float> maxVec(randomFloat(from, to), randomFloat(from, to));
-        struct BoundingBox bb(minVec, maxVec);
-        data.push_back(bb);
+// only print the ids of a tree
+void RTree::printTreeID(struct Node &node){
+    if(node.isLeaf)
+        cout<< "leaf "<< ":\t" << node.id << endl;
+    else
+        cout<< "node " << ":\t" << node.id << endl;
+        // print id for each node
+    if(!node.isLeaf){
+        for(auto &i : node.childNode)
+            printTreeID(*i);
     }
-    return data;
 }
 
 
-void RTree::printTree(struct Node &node, int counter){
+void RTree::printTree(struct Node &node){
     if(node.isLeaf)
-        cout<< "leaf " << counter << ":\t"<< endl;
+        cout<< "leaf " << node.id << ":\t"<< endl;
     else
-        cout<< "node " << counter << ":\t"<< endl;
+        cout<< "node " << node.id << ":\t"<< endl;
     for(auto &i : node.entries){
         // print min values for each node
         for(const auto &j : i.min){
@@ -47,13 +49,15 @@ void RTree::printTree(struct Node &node, int counter){
             cout<< j << "\t";
         }
         cout<< endl;
-        if(!node.isLeaf)
-            printTree(*i.childNode, counter++);
+    }
+    if(!node.isLeaf){
+    for(auto &i : node.childNode)
+            printTree(*i);
     }
 }
 
 
-// if a leaf fits in another node
+// if an elem fits in another entry
 // dimensions von child und node getrennt voneinander anschauen
 bool RTree::fitsInNode(struct BoundingBox &elem, struct BoundingBox &entry){
     bool fits = true;
@@ -142,8 +146,9 @@ float RTree::marginValue(vector<struct BoundingBox> &entries){
 }
 
 
-struct BoundingBox RTree::enclosingBB(vector<struct BoundingBox> &vec){
-    struct BoundingBox bb = newNode(vec[0], vec[1]);
+// determine the enclosing BoundingBox to a a set of BoundingBoxes
+struct BoundingBox::BoundingBox RTree::enclosingBB(vector<struct BoundingBox> &vec){
+    struct BoundingBox bb = vec[0];
     for(auto &i : vec)
         bb = newNode(bb, i);
     return bb;
@@ -155,18 +160,16 @@ struct BoundingBox RTree::enclosingBB(vector<struct BoundingBox> &vec){
 // input : overloaded node with max_children + 1 elements
 // return the two nodes that result from the split
 vector<struct Node::Node> RTree::split(struct Node &node){
+    cout<< "split node " << node.id << " with datasize " << node.data.size() << " and childNode size " << node.childNode.size() << endl; 
     int distributions = max_Children - (2 * min_Children) + 2;
     float minSum = __FLT_MAX__;
     int axis = 0;
     int sortStrategy = 0;
-    int dist = 0;
 
     // for each axis
     for(int i = 0; i < node.entries[0].min.size(); i++){
-        float minOverlapValue = __FLT_MAX__;
-        float minAreaValue = __FLT_MAX__;
-        int minDistAxis = 0;
-        cout << "size tree min: " << node.entries[0].min.size() << endl;
+        float sum = 0;
+ //       cout << "size tree min: " << node.entries[0].min.size() << endl;
         // for each axis compute sum of all margin-values of the different distributions
         int sumLower = 0;
         int sumUpper = 0;
@@ -180,76 +183,161 @@ vector<struct Node::Node> RTree::split(struct Node &node){
             return b1.max[i] < b2.max[i];
         });
 
-    	// for each sort -> divide all M-2m+2 distributions into two groups
+        // for each sort -> divide all M-2m+2 distributions into two groups
         for(int j = 0; j < distributions; j++){
-            // if the split will be performed on this axis (min margin value for the axis): use minoverlap value for the split 
-            // if tie -> min area value
-            float minOverlapValueAxis = __FLT_MAX__;
-            float minAreaValueAxis = __FLT_MAX__;
+
             int entries = min_Children - 1 + j;
-            cout << "entries: " << entries;
-            cout << " distribution " << j << "\t " << distributions << "\t" << endl;
+ //           cout << "entries: " << entries;
+ //           cout << " distribution " << j << "\t " << distributions << "\t" << endl;
             // first group contains (m-1)+k entries
             vector<struct BoundingBox> lowerGroup1(&sortLower[0],&sortLower[entries]);
-            cout<< "lower group1 :\n"; 
+ //           cout<< "lower group1 :\n"; 
+ //         for(auto &i : lowerGroup1)
+ //               cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
            // printTree(lowerGroup1);
             vector<struct BoundingBox> upperGroup1(&sortUpper[0],&sortUpper[entries]);
-            cout<< "upper group1 :\n"; 
+ //           cout<< "upper group1 :\n"; 
+//            for(auto &i : upperGroup1)
+//                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
            // printTree(upperGroup1);
             // second group contains remaining entries
             vector<struct BoundingBox> lowerGroup2(&sortLower[entries],&sortLower[sortLower.size()]);
-            cout<< "lower group2 :\n"; 
+//            cout<< "lower group2 :\n"; 
+//            for(auto &i : lowerGroup2)
+//                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
            // printTree(lowerGroup2);
             vector<struct BoundingBox> upperGroup2(&sortUpper[entries],&sortUpper[sortUpper.size()]);
+ //           cout<< "upper group2 :\n"; 
+ //           for(auto &i : upperGroup2)
+ //               cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
     
             // Compute sum of all margin-values of the different distributions
-            sumLower += marginValue(lowerGroup1) + marginValue(lowerGroup2);
-            cout << "margin lower: " << sumLower << " g1: " <<  marginValue(lowerGroup1) << " g2: " <<  marginValue(lowerGroup2);
-            sumUpper +=  marginValue(upperGroup1) + marginValue(upperGroup2);
-            cout << "margin upper: " << sumUpper;
-            struct BoundingBox tmp1 = enclosingBB(sortLower);
-            struct BoundingBox tmp2 = enclosingBB(sortUpper);
+            sumLower = marginValue(lowerGroup1) + marginValue(lowerGroup2);
+            sumUpper =  marginValue(upperGroup1) + marginValue(upperGroup2);
+//            cout << " sum " << sum; 
+            sum = sum +  marginValue(lowerGroup1) + marginValue(lowerGroup2) + marginValue(upperGroup1) + marginValue(upperGroup2);
+ //           cout << "margin lower: " << sumLower << " margin upper: " << sumUpper << " sum " << sum;
 
-            // Determine the min overlap value and min area of the axis
-                // lower distribution has min overlap value -> save dist
-                if(overlapArea(tmp1, tmp2) < minOverlapValueAxis){
-                    minOverlapValueAxis  = overlapArea(tmp1, tmp2);
-                    minDistAxis = j;
-
-                }
-                // tie -> area value
-                if(minOverlapValueAxis == overlapArea(tmp1, tmp2)){
-                    if(rectangleArea(tmp1) < minAreaValueAxis){
-                        minAreaValueAxis = minAreaValueAxis;
-                        minDistAxis = j;
-                    }
-
-                }
-
-             // choose axis with min sum as split axis, if found -> save relevant parameters to replicate this split on the actual tree
-             cout << "min sum " << minSum << endl;
         }
-        if(sumLower < sumUpper){
-            if(sumLower < minSum){
-                minSum = sumLower;
+
+          // choose axis with min margin sum as split axis, if found
+//            cout << "min sum " << minSum << endl;
+            if(sum < minSum){
+                minSum = sum;
                 axis = i;
-                sortStrategy = 0;
-                dist = minDistAxis;
-                cout << "min sum lower " << minSum << endl;
+//                cout << "min sum ... " << minSum << " axis " << axis << endl;
             } else {
-                if(sumUpper < minSum){
-                    minSum = sumUpper;
-                    axis = i;
-                    sortStrategy = 1;
-                    dist = minDistAxis;
-                    cout << "min sum upper " << minSum << endl;
-                }
+//                cout << "no sum ... " << sum << " axis " << i << endl;
             }
-        }
     }
 
 
+    // determine the split distribution
+        float minOverlapValue = __FLT_MAX__;
+        float minAreaValue = __FLT_MAX__;
+        int distribution = 0;
+
+    // sort the the nodes according to the determined axis upwards and downwards
+       vector<struct BoundingBox> sortLower = node.entries;
+        sort(sortLower.begin(), sortLower.end(), [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
+            return b1.min[axis] < b2.min[axis];
+        });
+        vector<struct BoundingBox> sortUpper = node.entries;
+        sort(sortUpper.begin(), sortUpper.end(), [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
+            return b1.max[axis] < b2.max[axis];
+        });
+
+
+    	// for each sort -> divide all M-2m+2 distributions into two groups
+        for(int j = 0; j < distributions; j++)  {
+            // if the split will be performed on this axis (min margin value for the axis): use minoverlap value for the split 
+            // if tie -> min area value
+
+ //       cout << "size tree min: " << node.entries[0].min.size() << endl;
+        int sumLower = 0;
+        int sumUpper = 0;
+        // sort entries by lower then by upper value of their rectangles
+    
+            int entries = min_Children - 1 + j;
+//            cout << "entries: " << entries;
+//            cout << " distribution " << j << "\t " << distributions << "\t" << endl;
+            // first group contains (m-1)+k entries
+            vector<struct BoundingBox> lowerGroup1(&sortLower[0],&sortLower[entries]);
+ /*           cout<< "lower group1 :\n"; 
+            for(auto &i : lowerGroup1)
+                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+ */           vector<struct BoundingBox> upperGroup1(&sortUpper[0],&sortUpper[entries]);
+  /*          cout<< "upper group1 :\n"; 
+            for(auto &i : upperGroup1)
+                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+   */         // second group contains remaining entries
+            vector<struct BoundingBox> lowerGroup2(&sortLower[entries],&sortLower[sortLower.size()]);
+/*            cout<< "lower group2 :\n"; 
+            for(auto &i : lowerGroup2)
+                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+  */          vector<struct BoundingBox> upperGroup2(&sortUpper[entries],&sortUpper[sortUpper.size()]);
+/*            cout<< "upper group2 :\n"; 
+            for(auto &i : upperGroup2)
+                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+*/
+            // create bounding boxes out of the vectors to determine the area and overlap values of the distributions
+            struct BoundingBox tmp1= enclosingBB(lowerGroup1);
+            struct BoundingBox tmp2 = enclosingBB(lowerGroup2);
+            struct BoundingBox tmp3 = enclosingBB(upperGroup1);
+            struct BoundingBox tmp4 = enclosingBB(upperGroup2);
+
+            // Determine the min overlap value and min area of the axis
+ //           cout << "..." << tmp1.min[0] << " " << tmp1.min[1] << " " <<  tmp1.max[0] << " " << tmp1.max[1] << endl;
+//            cout << "..." << tmp2.min[0] << " " << tmp2.min[1] << " " <<  tmp2.max[0] << " " << tmp2.max[1] << endl;
+            float tmpOverlapLower = overlapArea(tmp1, tmp2);
+            float tmpOverlapUpper = overlapArea(tmp3, tmp4);
+            float tmpAreaLower = rectangleArea(tmp1) + rectangleArea(tmp2);
+            float tmpAreaUpper = rectangleArea(tmp3) + rectangleArea(tmp4);
+//            cout << "overlaplower " << tmpOverlapLower << " overlapupper " << tmpOverlapUpper << " tmparealower " << tmpAreaLower << " tmpAreaUpper " << tmpAreaUpper << endl;
+//            cout  << "minoverlap " << minOverlapValue << " minarea " << minAreaValue << endl;
+
+        //check if the current distribution has the min overlap value, if tie: min area vlue
+
+            // for lower distribution
+            if(tmpOverlapLower < minOverlapValue){
+                minOverlapValue  = tmpOverlapLower;
+                minAreaValue = tmpAreaLower;
+                distribution = j;
+                sortStrategy = 0;
+                cout  << 1 << " minoverlap " << minOverlapValue << " minarea " << minAreaValue << endl;
+            // tie -> area value
+            } else if(tmpOverlapLower ==  minOverlapValue){
+                if(tmpAreaLower < minAreaValue){
+                    minAreaValue = tmpAreaLower;
+                    distribution = j;
+                    sortStrategy = 0;
+                    cout  << 2 << " minoverlap " << minOverlapValue << " minarea " << minAreaValue << endl;
+                }
+            }
+
+            // for upper distribution
+            if(tmpOverlapUpper < minOverlapValue){
+                minOverlapValue  = tmpOverlapUpper;
+                minAreaValue = tmpAreaUpper;
+                distribution = j;
+                sortStrategy = 0;
+                 cout  << 3 << " minoverlap " << minOverlapValue << " minarea " << minAreaValue << endl;
+                // tie -> area value
+            } else if(tmpOverlapUpper ==  minOverlapValue){
+                if(tmpAreaUpper < minAreaValue){
+                    minAreaValue = tmpAreaUpper;
+                    distribution = j;
+                    sortStrategy = 0;
+                    cout  << 4 << " minoverlap " << minOverlapValue << " minarea " << minAreaValue << endl;
+                }
+                cout  << 5 << " minoverlap " << tmpAreaUpper << " minarea " << minAreaValue << endl;
+            }
+            cout  << j << " minoverlap.. " << minOverlapValue << " minarea " << minAreaValue << " minDistribution " << distribution << endl;
+        }        
+    cout << " axis " << axis<< " sort " << sortStrategy << " distribution " << distribution << endl;
+ 
     // replicate the split with the saved parameters (sortStrategy, axis, dist -> which distribution to use)
+    cout << endl << "replicate the split" << endl;
     // sortStrategy 0 -> sort lower
     if(sortStrategy == 0){
         sort(node.entries.begin(), node.entries.end(), [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
@@ -261,15 +349,41 @@ vector<struct Node::Node> RTree::split(struct Node &node){
             return b1.max[axis] < b2.max[axis];
         });
     }
+    cout << "nodes sorted with sortStrategy " << sortStrategy << endl;
 
-    // divide all M-2m+2 distributions into two groups
+    // divide all M-2m+2 distributions into two groups -> along the distribution determined before
     // !!! set fathernode to the old one
-    int entries = min_Children - 1 + dist;
-    vector<struct Node> group1(&node.entries[0], &node.entries[entries]);
-    vector<struct Node> group2(&node.entries[entries], &node.entries[node.entries.size()]);
-    
-    //return the two new nodes
-    return {group1, group2};
+    int entries = min_Children - 1 + distribution;
+//    cout << "entries " << entries << endl;
+    vector<struct BoundingBox> group1(&node.entries[0], &node.entries[entries]);
+    cout << "group 1 size " << group1.size();
+    vector<struct BoundingBox> group2(&node.entries[entries], &node.entries[node.entries.size()]);
+    cout << "group 2 size " << group2.size() << " datasize " << node.data.size() << endl;
+
+    // if the node was a leaf -> split in two new leafs
+    if(node.isLeaf){
+        cout << "node is leaf" << endl;
+        vector<struct BoundingBox *> data1(&node.data[0], &node.data[entries]);
+        cout << "data 1 size " << data1.size();
+        vector<struct BoundingBox *> data2(&node.data[entries], &node.data[node.data.size()]);
+        cout << "data 2 size " << data2.size();
+        struct Node node1(group1, data1);
+        struct Node node2(group2, data2);
+        cout<< "print the two nodes" << endl;
+        printTreeID(node1);
+        printTreeID(node2);
+        //return the two new nodes
+        return {node1, node2};
+    // if the node was an inner node -> split in two new inner nodes
+    } else{
+        cout << "node is not leaf" << endl;
+        vector<struct Node *> childNodes1(&node.childNode[0], &node.childNode[entries]);
+        vector<struct Node *> childNodes2(&node.childNode[entries], &node.childNode[node.childNode.size()]);
+        struct Node node1(group1, childNodes1);
+        struct Node node2(group2, childNodes2);
+        //return the two new nodes
+        return {node1, node2};
+    }
 }
 
 
@@ -297,11 +411,12 @@ bool RTree::overlap(struct BoundingBox &bb1, struct BoundingBox &bb2) {
 
 
 // minimum overlap enlargement of a node in the tree when inserting the elements -> several nodes if they have the same min overlap enlargement
-vector<struct BoundingBox::BoundingBox *> RTree::minOverlap(struct Node &node, struct BoundingBox &elem){
+vector<int> RTree::minOverlap(struct Node &node, struct BoundingBox &elem){
     float minOverlapEnl = __FLT_MAX__;
     vector<struct BoundingBox *> minOverlapNode;
+    vector<int> minOverlapNod;
     // for each element in the current node of the tree determine the overlap enlargement
-        for(int i = 0; i < node.entries.size(); i++){
+    for(int i = 0; i < node.entries.size(); i++){
      //   cout << node.entries[i].min[0] << node.entries[i].min[1] << endl;
         // determine current overlap area with the other elements
         float currentOverlap = 0;
@@ -309,7 +424,7 @@ vector<struct BoundingBox::BoundingBox *> RTree::minOverlap(struct Node &node, s
             if(&node.entries[j] != &node.entries[i]){
                 currentOverlap += overlapArea(node.entries[i], node.entries[j]);
            //     cout << "overlaparea with " << node.entries[j].min[0] << node.entries[j].min[1] << " " << overlapArea(node.entries[i],node.entries[j]) << endl;
-        }
+            }
         }
         // determine overlap area after inserting the element in the current element of the tree
         float newOverlap = 0;
@@ -324,129 +439,465 @@ vector<struct BoundingBox::BoundingBox *> RTree::minOverlap(struct Node &node, s
         // if the we find a new min overlap enlargement -> new vector with this subtree
         if((newOverlap - currentOverlap) < minOverlapEnl){
             minOverlapEnl = newOverlap - currentOverlap;
-            minOverlapNode = {&node.entries[i]};
+           // minOverlapNode = {&node.entries[i]};
+            minOverlapNod = {i};
         // if we have a subtree with the same min overlap enlargement -> add the subtree to the vector
         } else if((newOverlap - currentOverlap) == minOverlapEnl)
-            	minOverlapNode.push_back(&node.entries[i]);
+            	minOverlapNod.push_back(i);
     }
-    return minOverlapNode;
+    return minOverlapNod;
 }
 
 
 // in which subtree to insert the rectangle for R*-tree -> recursively until a leaf to insert the element is found
-struct Node::Node * RTree::chooseSubtree(struct Node &node, struct BoundingBox &elem, int level){
-    struct BoundingBox * n;
+struct Node::Node * RTree::chooseSubtree(struct Node &node, struct BoundingBox &elem){
+    cout << "chooooooooooooose SUbtreeeeeeeeeeeee   " << node.isLeaf << endl;
+    int n = 0;
+ //   cout << "elem : " << elem.min[0] << " " << elem.min[1] << " " << elem.max[0] << " " << elem.max[1]  << endl;
     // if te tree is a leaf -> return it
     if(node.isLeaf)
         return &node;
 
     //  if children are leaves
-    else if(node.entries[0].childNode->isLeaf){
-        for(auto &j : node.entries){
-        //    for(auto &i : j.childNode->entries)
-         //       cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+    else if(node.childNode[0]->isLeaf){
+        cout << "childNode bb: " << endl;
+        int counter = 0;
+ /*       for(auto &i : node.entries){
+                cout << counter << " " << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << " " << node.childNode[counter] << endl;
+                counter++;
         }
-        // choose entry in tree whose rectangle needs least overlap enlargements
-        vector<struct BoundingBox *> minOverlapVector = minOverlap(node, elem);
-     //   for(auto &i : minOverlapVector)
-      //      cout << i->min[0] << " " << i->min[1] << " " << i->max[0] << " " << i->max[1] << endl;
-
+ */       // choose entry in tree whose rectangle needs least overlap enlargements
+        vector<int> minOverlapVector = minOverlap(node, elem);
+/*        cout << "minoverlapvector :" << endl;
+        for(auto &i : minOverlapVector)
+            cout << i << " ";
+            cout<< endl;
+*/
         if(minOverlapVector.size() == 1)
-            return minOverlapVector[0]->childNode;
-
+            return node.childNode[minOverlapVector[0]];
+        
+        cout << "tie:" << endl;
         // if tie -> choose entry whose rectangle needs least incrementation of area
         float minIncrementation = __FLT_MAX__;
-        vector<struct BoundingBox *> minAreaEnlargement;
+        vector<int> minAreaEnlargement;
         for(auto &i : minOverlapVector){
-            float incr = incrementationArea(elem, *i);
-            cout << incr << endl;
+            float incr = incrementationArea(elem, node.entries[i]);
+            cout << " incr " << incr << " minincrementation " << minIncrementation << endl;
             // choose element with smallest incrementation of area
             if(incr < minIncrementation){
                 minIncrementation = incr;
                 minAreaEnlargement = {i};
+                cout << " incr smaller as minIncrementation" << endl;
             } else if (incr == minIncrementation)
                 minAreaEnlargement.push_back(i);
+                cout << "incr == minINcrementation" << endl ;
         }
-       // for(auto &i : minAreaEnlargement[0]->childNode->entries)
-         //   cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
         if(minAreaEnlargement.size() == 1)
-            return minAreaEnlargement[0]->childNode;
+            return node.childNode[minAreaEnlargement[0]];
+        cout << " tie area enlargement " << endl;
         // if tie -> choose entry with smallest area
         float minArea = __FLT_MAX__;
         for(auto &i : minAreaEnlargement){
-            float area = rectangleArea(*i);
+            float area = rectangleArea(node.entries[i]);
+            cout << " area " << area << " minareaenlargement " << i << endl;
             // choose element with smallest area
             if(area < minArea){
                 minArea = area;
                 n = i;
+                cout << "area smaller minarea " << endl;
             }
         }
     // if children are not leaves
     } else {
+        cout << " children are not leaves " << endl;
+        cout << "childNode bb: " << endl;
+        int counter = 0;
+        for(auto &i : node.entries){
+                cout << counter << " " << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << " " << node.childNode[counter] << endl;
+                counter++;
+        }
         // choose entry in tree which needs least area enlargement
         float minIncrementation = __FLT_MAX__;
-        for(auto &i : node.entries){
-            float incr = incrementationArea(elem, i);
+        for(int i = 0; i < node.entries.size(); i++){
+            float incr = incrementationArea(elem, node.entries[i]);
+            cout << i <<  " incr " << incr << " minincrementation " << minIncrementation << endl;
             // choose node with smallest incrementation of area
             if(incr < minIncrementation){
                 minIncrementation = incr;
-               n = &i;
+               n = i;
+               cout<< "incr smaller minINcrementation" << endl;
             // if tie -> entry with smallest area
             } else if(incr == minIncrementation){
-                if(rectangleArea(i) < rectangleArea(*n)){
+                cout<< "incr == minINcrementation" << endl;
+                if(rectangleArea(node.entries[i]) < rectangleArea(node.entries[n])){
                     minIncrementation = incr;
-                    n = &i;
+                    n = i;
+                    cout << "rectangle smaller previous rectangle " << endl;
                 }
             }
         }
-    return n->childNode;
+        return chooseSubtree(*node.childNode[n], elem);
+    }
+    return node.childNode[n];
+}
+
+
+
+// determine the distance between the centres of two BouningBoxes
+float RTree::distanceBB(struct BoundingBox &b1, struct BoundingBox &b2){
+    float distance = 0;
+    
+    for(int i = 0; i < b1.min.size(); i++){
+        float p = b1.min[i] + 0.5 * (b1.max[i] - b1.min[i]);
+        float q = b2.min[i] + 0.5 * (b2.max[i] - b2.min[i]);
+
+        distance += powf(q - p,2);
+    }
+    distance = sqrtf(distance);
+}
+
+
+// find the leaf we want to delete
+struct Node::Node * RTree::findLeaf(struct Node &node, struct BoundingBox * entry){
+    if(!node.isLeaf){
+        cout<< "is not a leaf "<< endl;
+        for(int i = 0; i < node.entries.size(); i++){
+            if(fitsInNode(*entry, node.entries[i])){
+                cout << "fits in node " << i << endl;
+                return findLeaf(*node.childNode[i], entry);
+            }
+            return 0;
+        }
+    } else {
+        cout<< "is a leaf " << node.data.size() << entry << endl;
+      for(auto &i : node.data){
+            cout << " " << i << endl;
+            if(i == entry)
+                return &node;
+        }
+       cout <<" no leaf matchess" << endl;
+        return 0;
+    }
+}
+
+// find the leaf we want to delete
+struct Node::Node * RTree::findLeaf2(struct Node &node, struct BoundingBox * entry){
+  /*  if(!node.isLeaf){
+        cout<< "is not a node "<< endl;
+        for(int i = 0; i < node.entries.size(); i++){
+            if(fitsInNode(*entry, node.entries[i])){
+                cout << "fits in node " << endl;
+                return findLeaf(*node.childNode[i], entry);
+            }
+            return 0;
+        }
+    } else {
+        cout<< "is a leaf " << node.data.size() << entry << endl;
+      for(auto &i : node.data){
+            cout << " " << i << endl;
+            if(i == entry)
+                return &node;
+        }
+        cout <<" no leaf matchess" << endl;
+        return 0;
+    }*/
+    return 0;
+}
+
+
+// input: leaf node from which an entry has been deleted
+// eliminate node if it has not enough enttries
+// propagate node eliminatoin upwards if necessary
+// adjust all covering rectangles on the path to the root
+void RTree::condenseTree(struct Node &node){
+    // counter to determine the path to the root and where to insert the nodes
+    int counter = 0;
+    vector<struct Node *> deletedNodes;
+    vector<int> levels;
+    struct Node * tmp = &node;
+    while(!node.isRoot){
+        // check if the node has enough entries
+            if(tmp->entries.size() < min_Children){
+                struct Node * father = tmp->father;
+                for(int i = 0; i < father->entries.size(); i++){
+                    // erase the corresponding entry in the fathernode
+                    if(father->childNode[i] == tmp){
+                        father->entries.erase(node.entries.begin() + i); 
+                        father->childNode.erase(node.childNode.begin() + i); 
+                    }
+                }
+                deletedNodes.push_back(tmp);
+                levels.push_back(counter);
+            // if the node has enough entries and was not deleted
+            } else{
+                struct Node * father = tmp->father;
+                 for(int i = 0; i < father->entries.size(); i++){
+                    // adjust the corresponding rectangle
+                    if(father->childNode[i] == tmp){
+                        father->entries[i] = enclosingBB(tmp->entries);
+                    }
+                 }
+            }
+        tmp = tmp->father;
+        counter++;
+    }
+    // tmp is now the root
+    for(int i = 0; i < deletedNodes.size(); i++){
+        // reinsert all deleted entries from leaves with INSERT
+        if(levels[i] == 0){
+            for(auto &j : deletedNodes[i]->entries)
+                insert(*tmp, j);
+        // entries from higher-level nodes must be placed higher in the tree
+        } else {
+            // choose stubtree in which to insert the current node from the deleted nodes
+            struct BoundingBox bb = enclosingBB(deletedNodes[i]->entries);
+            struct Node * subtree = chooseSubtree(*tmp, bb);
+            // a deleted node that is no leaf must be inserted in the corresponding level
+            // -> from the leaf go levels[i] upwards
+            for(int j = 0; j < levels[i]; j++){
+                subtree = subtree->father;
+            }
+            // insert the node in the correct Node as entry/childNode
+            subtree->entries.push_back(bb);
+            subtree->childNode.push_back(deletedNodes[i]);
+            // if this new node itself overflows -> call overflowTreatment
+            if(subtree->entries.size() > max_Children){
+                int overflow = overFlowTreatment(subtree);
+            }
+            // propagate overflowTreatment upwards   
+        }
+            
     }
 }
 
 
-// overflow treatment for split -> 0 or reinsertion -> 1
-int RTree::overflowTreatment(vector<struct Node> &tree, struct Node &leaf, int level){
-
+// evtl nur void methode?
+// delete an entry from a node and adjust the BoundingBox of the node (father node)
+struct Node::Node RTree::deleteEntry(struct Node &node, struct BoundingBox * entry){
+    // find the leaf in which the entry is
+    cout << node.isLeaf << endl;
+    struct Node * leaf = findLeaf(node, entry);
+    if(leaf == 0){
+        cout << "no leaf was found" << endl;
+        return node;
+    }
+    // delete the entry from the leaf (BoundingBox and actual data)
+    cout << "before deletion " << leaf->data.size() << " "  << leaf->entries.size() << " " << entry << endl;
+    for(int i = 0; i < leaf->data.size(); i++){
+         cout << leaf->data[i] << endl;
+    }
+     cout << endl << endl;
+    for(int i = 0; i < leaf->data.size(); i++){
+         cout << leaf->data[i] << endl;
+        if(leaf->data[i] == entry){
+            cout << "this is the entry" << endl;
+            printBB(leaf->entries[i]);
+            printBB(*leaf->data[i]);
+            leaf->entries.erase(leaf->entries.begin() + i);    
+            leaf->data.erase(leaf->data.begin() + i);
+        }
+    }
+    cout << endl << "after deletion " << leaf->data.size() << endl;
+    for(int i = 0; i < leaf->data.size(); i++){
+        cout << leaf->data[i] << endl;
+    }
+  //  condenseTree(node);
 }
 
-/*
 
-// traverse recursively from root to leaf
-void RTree::insert(vector<struct Node> &tree, struct Node &leaf){
-    // if the tree is empty: create a new root
-    if(tree.empty())
-        tree = {createRoot(leaf)};
-    // if the tree is a leaf: split when full, then insert leaf
-    else {
-        // find the node in which to place the entry
-        vector<struct Node> * n = chooseSubtree(tree, leaf, 0);
-        // if there is place in leaf n -> insert n the leaf in n
-        if(n->size() < max_Children){
-            n->push_back(leaf);
-        }  else if(n->size() == max_Children){
-            int treatment = overflowTreatment(tree, leaf, (*n)[0].level);
-            // if split -> 0 was performed: propagate overflow treatment upwards if necessary
-            // check father node !!!
-            if(treatment == 0 ){
+// evtl nur void methode?????
+// delete the ith entry from a node and adjust the BoundingBox of the node (father node)
+struct Node::Node RTree::deleteEntryi(struct Node &node, int i){
+    // find the leaf in which the entry is
+    struct Node * leaf = findLeaf(node, &node.entries[i]);
+    if(leaf = 0){
+        cout << "no leaf was found" << endl;
+        return node;
+    }
+    // delete the entry from the leaf (BoundingBox and actual data)
+    node.entries.erase(node.entries.begin() + i);    
+    node.data.erase(node.data.begin() + i);
+    condenseTree(node);
+}
 
-            // if split was performed on a root: create a new root
-            } else if(tree[0].isRoot && treatment == 0){
-                struct Node newRoot = newNode((*n)[0], (*n)[1]);
-                newRoot.childNodes.push_back((*n)[0]);
-                newRoot.childNodes.push_back((*n)[1]);
-                newRoot.isRoot = true;
-                tree = {newRoot};
+
+// find the entries in the Leaf of one Node
+vector<struct BoundingBox::BoundingBox *> RTree::findEntries(struct Node &node){
+    vector<struct BoundingBox *> entries;
+    if(node.isLeaf)
+        return node.data;
+    for(auto &i : node.childNode){
+        vector<struct BoundingBox *> tmp = findEntries(*i);
+        entries.insert(entries.end(), tmp.begin(), tmp.end());
+    } 
+    return entries;
+}
+
+
+// reinsert the first entries of a node
+void RTree::reinsert(struct Node * &tree, struct Node &node){
+    float mindDistance = __FLT_MAX__;
+    // BoundingBox of the node
+    struct BoundingBox n = enclosingBB(node.entries);
+    cout << "encloseing BondingBox of  the node " << node.id << endl;
+
+    // vector for the distances of the min_children + 1 entries to the centre of the BoundingBox of the node
+    vector<float> distances;
+
+    // for all entries distence between centre of tne entry and the BoundingBox of the node
+    for(auto &i : node.entries)
+        distances.push_back(distanceBB(i, n));
+    cout << "distances: ";
+    for(auto &i: distances)
+        cout << i;
+    cout << endl;
+
+    // sort the distances by decreasing order
+    sort(distances.begin(), distances.end(), greater<float>());
+
+    // remove the first p entries from the node
+    vector<struct BoundingBox *> deletedData;
+    // remove the entries
+    cout << endl << "REINSERTION:  p: " << p << endl; 
+    for(int i = 0; i < p; i++){
+        deletedData.push_back(node.data[i]);
+    }  
+    for(auto &i: deletedData){
+        // erase the first element !!!
+        node.entries.erase(node.entries.begin());   
+        node.data.erase(node.data.begin());  
+        insert(*tree, *i);
+    }
+}
+
+
+// gets as input a node with max_children+1 entrie -> decides if to call split or reinsert
+int RTree::overFlowTreatment(struct Node * node){
+    	// call reinsert
+        if(!node->isRoot && reins){
+            reins = false;
+            cout<< "node is not the root and has not overflown before" << endl;
+            // a reinsertion shall only be performed once on a node -> set overflow of the node to true
+            struct Node * root = node;
+            while(!root->isRoot){
+                root = root->father;
+            }
+            cout << endl << endl << endl << "CALL REINSERT" << endl;
+            reinsert(root, *node);
+            return 0;
+
+        // call split
+        } else {
+            struct Node * spl0;
+            struct Node * spl1;
+            vector<struct Node> spl = split(*node);
+            if(node->isLeaf){
+                cout << "perform split leaf: " << endl;
+                spl0  = new Node(spl[0].entries, spl[0].data);
+           //     node->entries = spl[0].entries;
+           //     node->data = spl[0].data;
+                spl1  = new Node(spl[1].entries, spl[1].data);
+            } else {
+                cout << "perform split not leaf:" << endl;
+                spl0  = new Node(spl[0].entries, spl[0].childNode);
+            //    node->entries = spl[0].entries;
+             //   node->childNode = spl[0].childNode;
+                spl1  = new Node(spl[1].entries, spl[1].childNode);
             }
 
-            // adjust all covering rectangles in the insertion path such that they are min. bounding
-            // boxes enclosing their children rectangles
+            cout<< "solution split:" << endl;
+            printTreeID(*spl0);
+            printTreeID(*spl1);
+            if(!node->isRoot){
+                // split the old node -> create the two new BoundingBoxes, append to the entries of the fathernode
+               // node->entries = {enclosingBB(spl0->entries), enclosingBB(spl1->entries)};
+ //               node->father->entries.push_back(enclosingBB(node->entries));
+
+ // -> Propagate enclosing rectangle upwards!!!!!
+                cout << endl << endl << endl << "SPL! ISLEEEEEEEEEEEEEEEAF " << spl1->isLeaf  << " " << node->isLeaf << endl;
+                node->father->entries.push_back(enclosingBB(spl1->entries));
+                // create the two new child nodes from the split -> set the fathernodes if the node is not the root
+ //               spl0->father = node->father;
+                spl1->father = node->father;
+            //    node->childNode = {spl0, spl1};
+ //               node->father->childNode.push_back(spl0);
+                node->father->childNode.push_back(spl1);
+                node->entries = spl0->entries;
+                node->childNode = spl0->childNode;
+                node->data = spl0->data;
+                for(auto &i: node->childNode)
+                    i->father = node;
+                delete spl0;
+                cout<< "tree at end of overFlowTreatment " << endl;
+                for(int i = 0; i < node->father->entries.size(); i++){
+                    printBB(node->father->entries[i]);
+                    cout << "data" << endl;
+                    printBB(*node->father->data[i]);
+                }
+                //printTreeID(*node->father);
+               // printTree(*node->father);
+            } else{
+                // old root becomes the new one
+                reins = true;
+                node->entries = {enclosingBB(spl0->entries), enclosingBB(spl1->entries)};
+                spl0->father = node;
+                spl1->father = node;
+                node->childNode = {spl0, spl1};
+        	    node->isLeaf = false; 
             
+ //               vector<struct BoundingBox> entr = {enclosingBB(node->entries), enclosingBB(spl1->entries)};
+ //               vector<struct Node *> children = {node, spl1};
+ //               struct Node * root = new Node(entr, children);
+                cout<< "tree at end of overFlowTreatment " << endl;
+                printTreeID(*node);
+                printTree(*node);
+            }
+            return 1;
         }
-        // else -> split the node
+}
+
+
+// traverse recursively from root to leaf
+void RTree::insert(struct Node &node, struct BoundingBox &entry){
+    // find the node in which to place the entry
+    struct Node * n = chooseSubtree(node, entry);
+    cout << " subtree choseeeeeeeeeeeeeeeeeeeeeen\t" << n->id << "\t" << n->isLeaf << endl;
+    // insert n the leaf in n
+    n->entries.push_back(entry);
+    n->data.push_back(&entry);
+    // if there are max_children+1 entries
+    if(n->entries.size() > max_Children){
+        cout << "overflow of the node " << n->id << endl;
+        int overflow = overFlowTreatment(n);
+  /*      cout<< "after overflowTreatment " << endl;
+        printTreeID(node);
+        printTree(node);
+*/        cout << "overflow treatment is " << overflow << endl;
+        if(overflow = 1){
+            // if split was performed: propagate overflow treatment upwards if necessary
+            struct Node * tmp = n;
+            while(!tmp->isRoot && tmp->father->entries.size() > max_Children){
+                cout<< "propagate overflow treatment upwards for fathernode " << tmp->father->id << endl;
+                overFlowTreatment(tmp->father);
+                tmp = tmp->father;
+            }
+        }
     }
+    // adjust all covering rectangles in the insertion path such that they are min. bounding
+    // boxes enclosing their children rectangles
+    struct Node * tmp = n;
+    while(!tmp->isRoot){
+        tmp = tmp->father;
+        for(int i = 0; i < tmp->entries.size(); i++){
+            tmp->entries[i] = enclosingBB(tmp->childNode[i]->entries);
+        }
+    }
+  //  cout<< "tree at end of insert " << endl;
+   // printTreeID(node);
+  //  printTree(node);
 
 }
-*/
+
 
 /*
 struct Node RTree::createRTree(vector<struct BoundingBox> &elements){
@@ -465,6 +916,90 @@ struct Node RTree::createRTree(vector<struct BoundingBox> &elements){
 }
 */
 
+
+// generate a random BB
+struct BoundingBox::BoundingBox RTree::randomBB(float from, float to, int dimension){
+    vector<float> min;
+    vector<float> max;
+    for(int i = 0; i < dimension; i++){
+        float m = randomFloat(from, to);
+        float ma = 0;
+        do{
+            ma = randomFloat(from, to);
+        } while (ma < m);
+        min.push_back(m);
+        max.push_back(ma);
+    }
+    struct BoundingBox bb(min, max);
+    return bb;
+}
+
+
+//generate a vector of BoundingBoxes
+vector<struct BoundingBox::BoundingBox> RTree::randomBBvector(float from, float to, int dimension, int amount){
+    vector<struct BoundingBox> vec;
+    for(int i = 0; i < amount; i++){
+        vec.push_back(randomBB(from, to, dimension));
+    }   
+    return vec;
+}
+
+
+//print a BoundingBox
+void RTree::printBB(struct BoundingBox bb){
+    for(int i = 0; i < bb.min.size(); i++)
+        cout << bb.min[i] << " ";
+    for(int i = 0; i < bb.min.size(); i++)
+        cout << bb.max[i] << " ";
+    cout << endl;
+}
+
+// test1 : insert the same element in the tree
+void RTree::test1(struct Node &root, struct BoundingBox &elem){
+    insert(root, elem);
+    cout << "root " << root.id << " datasize " << root.data.size() <<" childNode size " << root.childNode.size() <<endl;;
+    for(int i = 0; i < 3; i++)
+        insert(root, elem);
+    // root overflows -> split
+    cout << endl << endl << endl << "INSERT : root overflows -> split" << endl;
+    for(int i = 0; i < 4; i++)
+        insert(root, elem);
+    // leaf overflows -> reinsert
+    cout << endl << endl << endl << "INSERT : Leaf overflows first time -> reinsert" << endl;
+    for(int i = 0; i < 4; i++)
+        insert(root, elem);
+    // leaf 12 overflows -> split again (root has 4 entries)
+    for(int i = 0; i < 4; i++)
+        insert(root, elem);
+    // leaf 12 overflows -> split and propagate overflowTreatment upwards
+    cout << endl << endl << endl << "INSERT : propagate overflowTreatment upwards" << endl;
+    for(int i = 0; i < 15; i++)
+        insert(root, elem);
+    // leaf 12 overflows -> split and propagate overflowTreatment upwards two levels
+    cout << endl << endl << endl << "INSERT : propagate overflowTreatment upwards" << endl;
+    for(int i = 0; i < 4; i++)
+        insert(root, elem);
+    // leaf 12 overflows -> reinsert the entries
+ //    cout << endl << endl << endl << "REINSERT :" << endl;
+    for(int i = 0; i < 15; i++)
+        insert(root, elem);
+    for(int i = 0; i < 14; i++)
+        insert(root, elem);
+    cout << endl << endl << endl << "INSERT : root overflows -> split to 4 levels" << endl;
+    insert(root, elem);
+    // reinsert must be possible because an new level was created in the las insert
+    cout<< "reinsert possible: " << reins;
+
+    // print final tree and the inserted element
+    cout <<endl << endl << endl << "FINAL TREE: \n\nelem :" << root.id << endl;
+    printBB(elem);
+    cout << " insertID :" << endl;
+    printTreeID(root);
+    cout << " insert :" << endl;
+    printTree(root);
+
+}
+
 void RTree::init(int from, int to, int amount, int dimension){
     vector<float> min1 = {2,2};
     vector<float> max1 = {3,4};
@@ -474,8 +1009,8 @@ void RTree::init(int from, int to, int amount, int dimension){
     vector<float> max3 = {6,5};
     vector<float> min4 = {7,6};
     vector<float> max4 = {9,7};
-    vector<float> min5 = {5,5};
-    vector<float> max5 = {6,6};
+    vector<float> min5 = {2,2};
+    vector<float> max5 = {5,4};
     struct BoundingBox bb1(min1, max1);
     struct BoundingBox bb2(min2, max2);
     struct BoundingBox bb3(min3, max3);
@@ -484,8 +1019,14 @@ void RTree::init(int from, int to, int amount, int dimension){
 
     // make method createRandomData/rectangles
     vector<struct BoundingBox> data = {bb1, bb2, bb3, bb4, bb5};
+    vector<struct BoundingBox *> dataAdress = {&bb1, &bb2, &bb3, &bb4, &bb5};
+
+
+    // test distance
+   // cout << distanceBB(bb1, bb2) << endl;
+
   //  struct Node rtree = createRTree(data);
-    struct Node rtree(data);
+    struct Node rtree(data, dataAdress);
 /*
     // test rectangle area
     float rec = rectangleArea(bb1);
@@ -497,46 +1038,64 @@ void RTree::init(int from, int to, int amount, int dimension){
    // cout<< "incrementation Area: " << incrementationArea(bb2, bb1) << endl;
     // test overlapArea
    // cout << "overlap Area: " << overlapArea(bb2, bb3) << endl;
-
-  /*  //test createBB
+/*
+    //test createBB
     vector<struct BoundingBox> bb = createBB(4, 0, 11, 2);
     for(auto &i : bb){
         cout << i.min[0] << " ";
     }
-    */
+    cout << endl;
+*/  
 /*
    // test overlap
    cout << "overlap: " << overlap(bb1, bb2) << endl;
    cout << "overlap: " << overlap(bb1, bb3) << endl;
    */
+  
     vector<float> minVec  = {4,6};
     vector<float> maxVec = {5,7};
     struct BoundingBox elem(minVec, maxVec);
-    struct Node test(data);
- //   test.isLeaf = true;
-    struct Node a(data);
-    struct Node b(data);
-    struct Node c(data);
-    struct Node d(data);
-    struct Node e(data);
-    /*
-    a.isLeaf = true;
-    b.isLeaf = true;
-    c.isLeaf = true;
-    d.isLeaf = true;
-    e.isLeaf = true;
-    */
-     test.entries[0].childNode = &a;
-     test.entries[1].childNode = &b;
-     test.entries[2].childNode = &c;
-     test.entries[3].childNode = &d;
-     test.entries[4].childNode = &e;
-    test.entries[1].childNode->entries[0].max[0] = 4;
-    test.entries[2].childNode->entries[0].max[0] = 5;
-    test.entries[3].childNode->entries[0].max[0] = 6;
-    test.entries[4].childNode->entries[0].max[0] = 7;
-    test.entries[0].childNode->entries[0].max[0] = 8;
+    struct Node test(data, dataAdress);
+    struct Node a(data, dataAdress);
+
+
+    struct Node root;
+    // test 1 : always insert the same element
+ //   test1(root, elem);
     
+    // delete an entry
+    insert(root, bb1);
+    insert(root, bb2);
+    insert(root, bb3);
+    insert(root, bb3);
+    for(int i = 0; i < 10; i++)
+        insert(root, elem);
+   // deleteEntry(root, &bb2);
+
+
+//    cout << " pointer of root " << &root << endl;
+  //  cout << " pointer of bb3 " << &bb3 << endl;
+  //  deleteEntry(root, &bb3);
+
+    printTreeID(root);
+    printTree(root);
+ //   cout << " pointer of root " << &root << endl;
+    cout << endl << endl << "DELETE ENTRY " << endl << endl;
+    deleteEntry(root, &bb1);
+    cout << endl << endl << "AFTER DELETE ENTRY " << endl << endl;
+    printTreeID(root);
+    printTree(root);
+
+
+ //   cout << "findLeaf " << findLeaf(n2, &bb1) << " " << endl;
+
+
+ /*   // test findEntries
+    cout << "find Entries: " << endl;
+    vector<struct BoundingBox *> findentries = findEntries(n2);
+    for(auto &j : findentries)
+            cout << j->min[0] << " " << j->min[1] << " " << j->max[0] << " " << j->max[1] <<" " << &j << endl;
+*/
 /*
     // test min overlap enlargement
     cout << "min overlap enlargement: " << endl;
@@ -545,28 +1104,28 @@ void RTree::init(int from, int to, int amount, int dimension){
 */
 
 // test choose subtree
-    struct Node * subtree = chooseSubtree(test, elem, 0);
+/*
+    struct Node * subtree = chooseSubtree(test, elem);
     cout << endl << endl;
     for(auto &i : subtree->entries)
         cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+*/
+/*
 
-    // choose split axis
-    /*
-    vector<int> x = {1,2,3,4};
-   for(auto &i : x)
-        cout << i << " ";
-    cout << "vector: ";
-    vector<int> y(&x[0], &x[2]);
-    for(auto &i : y)
-        cout << i << " ";
-        */
-       
-    vector<struct Node> n = split(test)[0];
-    vector<struct Node> m = split(test)[1];
+    cout << "node: " << endl;
+    for(auto &i : test.entries)
+        cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
     
-    cout << "choose split axis: " << endl<< endl << endl << endl;
-    printTree(n);
-    printTree(m);
+    vector<struct Node> nodevec = split(test);
+    struct Node n = nodevec[0];
+    struct Node m = nodevec[1];
 
+    cout << "split first group: " << endl;
+    for(auto &i : n.entries)
+        cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+    cout << "split second group: " << endl;
+    for(auto &i : m.entries)
+        cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+ */
 
 }

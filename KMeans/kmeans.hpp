@@ -1,5 +1,4 @@
 
-
 #ifndef _kmeans_hpp_
 #define _kmeans_hpp_
 
