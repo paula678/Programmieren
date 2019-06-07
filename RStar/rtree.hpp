@@ -22,7 +22,15 @@ class RTree {
     // Constructor
     RTree(int max_children);
 
+    // general Methods
     float randomFloat(float min, float max);
+
+    template <typename T> std::vector<T> apply_permutation(const std::vector<T>& vec, const std::vector<std::size_t>& p);
+
+    template <typename T> void apply_permutation_in_place(std::vector<T>& vec, const std::vector<std::size_t>& p);
+
+    template <typename T, typename Compare> std::vector<std::size_t> sort_permutation(const std::vector<T>& vec,
+    Compare compare);
 
     // print methods:
     void printTree(struct Node &node);
@@ -74,10 +82,12 @@ class RTree {
 
     struct BoundingBox randomBB(float from, float to, int dimension);
 
-    vector<struct BoundingBox> randomBBvector(float from, float to, int dimension, int amount);
+    vector<struct BoundingBox> randomBBvector(float from, float to, int amount, int dimension);
 
     // tests:
     void test1(struct Node &root, struct BoundingBox &elem);
+
+    void test2(struct Node &root, int from, int to, int amount, int dimension);
 
     // initial method that is called
     void init(int from, int to, int amount, int dimension);

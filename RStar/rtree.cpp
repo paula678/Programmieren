@@ -338,7 +338,7 @@ vector<struct Node::Node> RTree::split(struct Node &node){
  
     // replicate the split with the saved parameters (sortStrategy, axis, dist -> which distribution to use)
     cout << endl << "replicate the split" << endl;
-    // sortStrategy 0 -> sort lower
+/*    // sortStrategy 0 -> sort lower
     if(sortStrategy == 0){
         sort(node.entries.begin(), node.entries.end(), [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
             return b1.min[axis] < b2.min[axis];
@@ -349,7 +349,31 @@ vector<struct Node::Node> RTree::split(struct Node &node){
             return b1.max[axis] < b2.max[axis];
         });
     }
+ */   
+    // sortStrategy 0 -> sort lower
+    if(sortStrategy == 0){
+        auto p = sort_permutation(node.entries, [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
+            return b1.min[axis] < b2.min[axis];
+        });
+        // sort the entries as well as the data/childNode the same way
+        node.entries = apply_permutation(node.entries, p);
+        if(node.isLeaf)
+            node.data = apply_permutation(node.data, p);
+        else
+            node.childNode = apply_permutation(node.childNode, p); 
+    // sortStrategy 1 -> sort upper
+    } else {
+        auto p = sort_permutation(node.entries, [ axis ](const struct BoundingBox& b1, const struct BoundingBox& b2){
+            return b1.max[axis] < b2.max[axis];
+        });
+        node.entries = apply_permutation(node.entries, p);
+        if(node.isLeaf)
+            node.data = apply_permutation(node.data, p);
+        else
+            node.childNode = apply_permutation(node.childNode, p);
+    }
     cout << "nodes sorted with sortStrategy " << sortStrategy << endl;
+
 
     // divide all M-2m+2 distributions into two groups -> along the distribution determined before
     // !!! set fathernode to the old one
@@ -556,17 +580,20 @@ float RTree::distanceBB(struct BoundingBox &b1, struct BoundingBox &b2){
 }
 
 
-// find the leaf we want to delete
+// find the Leaf of an entry
 struct Node::Node * RTree::findLeaf(struct Node &node, struct BoundingBox * entry){
     if(!node.isLeaf){
+        struct Node * sol;
         cout<< "is not a leaf "<< endl;
         for(int i = 0; i < node.entries.size(); i++){
             if(fitsInNode(*entry, node.entries[i])){
-                cout << "fits in node " << i << endl;
-                return findLeaf(*node.childNode[i], entry);
+                cout << "fits in node " << node.id << endl;
+                sol = findLeaf(*node.childNode[i], entry);
+                if(sol != 0)
+                    return sol;
             }
-            return 0;
         }
+        return 0;
     } else {
         cout<< "is a leaf " << node.data.size() << entry << endl;
       for(auto &i : node.data){
@@ -579,7 +606,7 @@ struct Node::Node * RTree::findLeaf(struct Node &node, struct BoundingBox * entr
     }
 }
 
-
+/*
 // change for lookup method!!
 // find the entries in the Leaf of one Node
 vector<struct BoundingBox::BoundingBox *> RTree::findEntries(struct Node &node){
@@ -592,7 +619,7 @@ vector<struct BoundingBox::BoundingBox *> RTree::findEntries(struct Node &node){
     } 
     return entries;
 }
-
+*/
 
 // reinsert the first entries of a node
 void RTree::reinsert(struct Node * &tree, struct Node &node){
@@ -741,6 +768,7 @@ void RTree::insert(struct Node &node, struct BoundingBox &entry){
     struct Node * tmp = n;
     while(!tmp->isRoot){
         tmp = tmp->father;
+        cout<< "ADJUST BBBBBBBBBBBBBBBBBBBS" << tmp->id <<  endl;
         for(int i = 0; i < tmp->entries.size(); i++){
             tmp->entries[i] = enclosingBB(tmp->childNode[i]->entries);
         }
@@ -789,7 +817,7 @@ struct BoundingBox::BoundingBox RTree::randomBB(float from, float to, int dimens
 
 
 //generate a vector of BoundingBoxes
-vector<struct BoundingBox::BoundingBox> RTree::randomBBvector(float from, float to, int dimension, int amount){
+vector<struct BoundingBox::BoundingBox> RTree::randomBBvector(float from, float to, int amount, int dimension){
     vector<struct BoundingBox> vec;
     for(int i = 0; i < amount; i++){
         vec.push_back(randomBB(from, to, dimension));
@@ -802,6 +830,7 @@ vector<struct BoundingBox::BoundingBox> RTree::randomBBvector(float from, float 
 void RTree::printBB(struct BoundingBox bb){
     for(int i = 0; i < bb.min.size(); i++)
         cout << bb.min[i] << " ";
+    cout<< endl;
     for(int i = 0; i < bb.min.size(); i++)
         cout << bb.max[i] << " ";
     cout << endl;
@@ -826,7 +855,7 @@ void RTree::test1(struct Node &root, struct BoundingBox &elem){
         insert(root, elem);
     // leaf 12 overflows -> split and propagate overflowTreatment upwards
     cout << endl << endl << endl << "INSERT : propagate overflowTreatment upwards" << endl;
-    for(int i = 0; i < 15; i++)
+  /*  for(int i = 0; i < 15; i++)
         insert(root, elem);
     // leaf 12 overflows -> split and propagate overflowTreatment upwards two levels
     cout << endl << endl << endl << "INSERT : propagate overflowTreatment upwards" << endl;
@@ -839,6 +868,7 @@ void RTree::test1(struct Node &root, struct BoundingBox &elem){
     for(int i = 0; i < 14; i++)
         insert(root, elem);
     cout << endl << endl << endl << "INSERT : root overflows -> split to 4 levels" << endl;
+    insert(root, elem);*/
     insert(root, elem);
     // reinsert must be possible because an new level was created in the las insert
     cout<< "reinsert possible: " << reins;
@@ -850,8 +880,72 @@ void RTree::test1(struct Node &root, struct BoundingBox &elem){
     printTreeID(root);
     cout << " insert :" << endl;
     printTree(root);
-
 }
+
+
+// test2 : insert randome element in the tree
+void  RTree::test2(struct Node &root, int from, int to, int amount, int dimension){
+    vector<struct BoundingBox > bboxes = randomBBvector(from, to, amount, dimension);
+   // for(auto &i: bboxes)
+     //   cout<< &i << endl;
+    for(int i = 0; i < bboxes.size(); i++){
+        insert(root, bboxes[i]);
+    }
+    // print final tree and the inserted element
+    cout <<endl << endl << endl << "FINAL TREE: \n " << root.id << endl;
+    cout << " insertID :" << endl;
+    printTreeID(root);
+    cout << " insert :" << endl;
+    printTree(root);
+    cout << endl << endl << "THE BOXES ARE" << endl;
+    for(auto &i: bboxes){
+        cout<< &i << endl;
+        printBB(i);
+    }
+  //  for(auto &i: bboxes)
+    //    cout<< &i << endl;
+    struct Node * leafNode= findLeaf(root, &bboxes[0]);
+    cout << endl << endl << "THE LEAF NODE IS: " << leafNode->id << endl << &leafNode << endl;
+}
+
+template <typename T, typename Compare> std::vector<std::size_t> RTree::sort_permutation(const std::vector<T>& vec,
+    Compare compare) {
+    std::vector<std::size_t> p(vec.size());
+    std::iota(p.begin(), p.end(), 0);
+    std::sort(p.begin(), p.end(),
+        [&](std::size_t i, std::size_t j){ return compare(vec[i], vec[j]); });
+    return p;
+}
+
+template <typename T> void RTree::apply_permutation_in_place(std::vector<T>& vec, const std::vector<std::size_t>& p) {
+    std::vector<bool> done(vec.size());
+    for (std::size_t i = 0; i < vec.size(); ++i)
+    {
+        if (done[i])
+        {
+            continue;
+        }
+        done[i] = true;
+        std::size_t prev_j = i;
+        std::size_t j = p[i];
+        while (i != j)
+        {
+            std::swap(vec[prev_j], vec[j]);
+            done[j] = true;
+            prev_j = j;
+            j = p[j];
+        }
+    }
+}
+
+template <typename T> std::vector<T> RTree::apply_permutation(const std::vector<T>& vec, const std::vector<std::size_t>& p) {
+    std::vector<T> sorted_vec(vec.size());
+    std::transform(p.begin(), p.end(), sorted_vec.begin(),
+        [&](std::size_t i){ return vec[i]; });
+    return sorted_vec;
+}
+
+bool wayToSort(int i, int j) { return i > j; }
 
 void RTree::init(int from, int to, int amount, int dimension){
     vector<float> min1 = {2,2};
@@ -914,7 +1008,27 @@ void RTree::init(int from, int to, int amount, int dimension){
 
     struct Node root;
     // test 1: always insert the same element
-    test1(root, elem);
+  //  test1(root, elem);
+
+  /*  vector<float> minVec1  = {4,7};
+    vector<float> maxVec1 = {5,7};
+    struct BoundingBox elem1(minVec1, maxVec1);
+    cout<< endl << endl << endl << "INSERT LARGER ELEMENT" << endl;
+    insert(root, elem1);
+    vector<float> minVec2  = {2,7};
+    vector<float> maxVec2= {2,7};
+    struct BoundingBox elem2(minVec2, maxVec2);
+    insert(root, elem2);
+    vector<float> minVec3  = {6,9};
+    vector<float> maxVec3 = {7,11};
+    struct BoundingBox elem3(minVec3, maxVec3);
+    insert(root, elem3);
+    printTreeID(root);
+    printTree(root);
+*/
+    //test 2: insert random elements
+    test2(root, from, to, amount, dimension);
+
 
 
 //    cout << " pointer of root " << &root << endl;
