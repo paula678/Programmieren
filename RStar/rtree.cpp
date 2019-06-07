@@ -542,7 +542,6 @@ struct Node::Node * RTree::chooseSubtree(struct Node &node, struct BoundingBox &
 }
 
 
-
 // determine the distance between the centres of two BouningBoxes
 float RTree::distanceBB(struct BoundingBox &b1, struct BoundingBox &b2){
     float distance = 0;
@@ -580,147 +579,8 @@ struct Node::Node * RTree::findLeaf(struct Node &node, struct BoundingBox * entr
     }
 }
 
-// find the leaf we want to delete
-struct Node::Node * RTree::findLeaf2(struct Node &node, struct BoundingBox * entry){
-  /*  if(!node.isLeaf){
-        cout<< "is not a node "<< endl;
-        for(int i = 0; i < node.entries.size(); i++){
-            if(fitsInNode(*entry, node.entries[i])){
-                cout << "fits in node " << endl;
-                return findLeaf(*node.childNode[i], entry);
-            }
-            return 0;
-        }
-    } else {
-        cout<< "is a leaf " << node.data.size() << entry << endl;
-      for(auto &i : node.data){
-            cout << " " << i << endl;
-            if(i == entry)
-                return &node;
-        }
-        cout <<" no leaf matchess" << endl;
-        return 0;
-    }*/
-    return 0;
-}
 
-
-// input: leaf node from which an entry has been deleted
-// eliminate node if it has not enough enttries
-// propagate node eliminatoin upwards if necessary
-// adjust all covering rectangles on the path to the root
-void RTree::condenseTree(struct Node &node){
-    // counter to determine the path to the root and where to insert the nodes
-    int counter = 0;
-    vector<struct Node *> deletedNodes;
-    vector<int> levels;
-    struct Node * tmp = &node;
-    while(!node.isRoot){
-        // check if the node has enough entries
-            if(tmp->entries.size() < min_Children){
-                struct Node * father = tmp->father;
-                for(int i = 0; i < father->entries.size(); i++){
-                    // erase the corresponding entry in the fathernode
-                    if(father->childNode[i] == tmp){
-                        father->entries.erase(node.entries.begin() + i); 
-                        father->childNode.erase(node.childNode.begin() + i); 
-                    }
-                }
-                deletedNodes.push_back(tmp);
-                levels.push_back(counter);
-            // if the node has enough entries and was not deleted
-            } else{
-                struct Node * father = tmp->father;
-                 for(int i = 0; i < father->entries.size(); i++){
-                    // adjust the corresponding rectangle
-                    if(father->childNode[i] == tmp){
-                        father->entries[i] = enclosingBB(tmp->entries);
-                    }
-                 }
-            }
-        tmp = tmp->father;
-        counter++;
-    }
-    // tmp is now the root
-    for(int i = 0; i < deletedNodes.size(); i++){
-        // reinsert all deleted entries from leaves with INSERT
-        if(levels[i] == 0){
-            for(auto &j : deletedNodes[i]->entries)
-                insert(*tmp, j);
-        // entries from higher-level nodes must be placed higher in the tree
-        } else {
-            // choose stubtree in which to insert the current node from the deleted nodes
-            struct BoundingBox bb = enclosingBB(deletedNodes[i]->entries);
-            struct Node * subtree = chooseSubtree(*tmp, bb);
-            // a deleted node that is no leaf must be inserted in the corresponding level
-            // -> from the leaf go levels[i] upwards
-            for(int j = 0; j < levels[i]; j++){
-                subtree = subtree->father;
-            }
-            // insert the node in the correct Node as entry/childNode
-            subtree->entries.push_back(bb);
-            subtree->childNode.push_back(deletedNodes[i]);
-            // if this new node itself overflows -> call overflowTreatment
-            if(subtree->entries.size() > max_Children){
-                int overflow = overFlowTreatment(subtree);
-            }
-            // propagate overflowTreatment upwards   
-        }
-            
-    }
-}
-
-
-// evtl nur void methode?
-// delete an entry from a node and adjust the BoundingBox of the node (father node)
-struct Node::Node RTree::deleteEntry(struct Node &node, struct BoundingBox * entry){
-    // find the leaf in which the entry is
-    cout << node.isLeaf << endl;
-    struct Node * leaf = findLeaf(node, entry);
-    if(leaf == 0){
-        cout << "no leaf was found" << endl;
-        return node;
-    }
-    // delete the entry from the leaf (BoundingBox and actual data)
-    cout << "before deletion " << leaf->data.size() << " "  << leaf->entries.size() << " " << entry << endl;
-    for(int i = 0; i < leaf->data.size(); i++){
-         cout << leaf->data[i] << endl;
-    }
-     cout << endl << endl;
-    for(int i = 0; i < leaf->data.size(); i++){
-         cout << leaf->data[i] << endl;
-        if(leaf->data[i] == entry){
-            cout << "this is the entry" << endl;
-            printBB(leaf->entries[i]);
-            printBB(*leaf->data[i]);
-            leaf->entries.erase(leaf->entries.begin() + i);    
-            leaf->data.erase(leaf->data.begin() + i);
-        }
-    }
-    cout << endl << "after deletion " << leaf->data.size() << endl;
-    for(int i = 0; i < leaf->data.size(); i++){
-        cout << leaf->data[i] << endl;
-    }
-  //  condenseTree(node);
-}
-
-
-// evtl nur void methode?????
-// delete the ith entry from a node and adjust the BoundingBox of the node (father node)
-struct Node::Node RTree::deleteEntryi(struct Node &node, int i){
-    // find the leaf in which the entry is
-    struct Node * leaf = findLeaf(node, &node.entries[i]);
-    if(leaf = 0){
-        cout << "no leaf was found" << endl;
-        return node;
-    }
-    // delete the entry from the leaf (BoundingBox and actual data)
-    node.entries.erase(node.entries.begin() + i);    
-    node.data.erase(node.data.begin() + i);
-    condenseTree(node);
-}
-
-
+// change for lookup method!!
 // find the entries in the Leaf of one Node
 vector<struct BoundingBox::BoundingBox *> RTree::findEntries(struct Node &node){
     vector<struct BoundingBox *> entries;
@@ -829,13 +689,6 @@ int RTree::overFlowTreatment(struct Node * node){
                     i->father = node;
                 delete spl0;
                 cout<< "tree at end of overFlowTreatment " << endl;
-                for(int i = 0; i < node->father->entries.size(); i++){
-                    printBB(node->father->entries[i]);
-                    cout << "data" << endl;
-                    printBB(*node->father->data[i]);
-                }
-                //printTreeID(*node->father);
-               // printTree(*node->father);
             } else{
                 // old root becomes the new one
                 reins = true;
@@ -892,9 +745,9 @@ void RTree::insert(struct Node &node, struct BoundingBox &entry){
             tmp->entries[i] = enclosingBB(tmp->childNode[i]->entries);
         }
     }
-  //  cout<< "tree at end of insert " << endl;
-   // printTreeID(node);
-  //  printTree(node);
+    cout<< endl << endl << endl << "TREE AT END OF INSERT" << endl;
+    printTreeID(node);
+    printTree(node);
 
 }
 
@@ -956,14 +809,14 @@ void RTree::printBB(struct BoundingBox bb){
 
 // test1 : insert the same element in the tree
 void RTree::test1(struct Node &root, struct BoundingBox &elem){
-    insert(root, elem);
     cout << "root " << root.id << " datasize " << root.data.size() <<" childNode size " << root.childNode.size() <<endl;;
-    for(int i = 0; i < 3; i++)
+    for(int i = 0; i < 4; i++)
         insert(root, elem);
     // root overflows -> split
     cout << endl << endl << endl << "INSERT : root overflows -> split" << endl;
-    for(int i = 0; i < 4; i++)
+    for(int i = 0; i < 4; i++){
         insert(root, elem);
+    }
     // leaf overflows -> reinsert
     cout << endl << endl << endl << "INSERT : Leaf overflows first time -> reinsert" << endl;
     for(int i = 0; i < 4; i++)
@@ -1060,32 +913,13 @@ void RTree::init(int from, int to, int amount, int dimension){
 
 
     struct Node root;
-    // test 1 : always insert the same element
- //   test1(root, elem);
-    
-    // delete an entry
-    insert(root, bb1);
-    insert(root, bb2);
-    insert(root, bb3);
-    insert(root, bb3);
-    for(int i = 0; i < 10; i++)
-        insert(root, elem);
-   // deleteEntry(root, &bb2);
+    // test 1: always insert the same element
+    test1(root, elem);
 
 
 //    cout << " pointer of root " << &root << endl;
   //  cout << " pointer of bb3 " << &bb3 << endl;
   //  deleteEntry(root, &bb3);
-
-    printTreeID(root);
-    printTree(root);
- //   cout << " pointer of root " << &root << endl;
-    cout << endl << endl << "DELETE ENTRY " << endl << endl;
-    deleteEntry(root, &bb1);
-    cout << endl << endl << "AFTER DELETE ENTRY " << endl << endl;
-    printTreeID(root);
-    printTree(root);
-
 
  //   cout << "findLeaf " << findLeaf(n2, &bb1) << " " << endl;
 

@@ -55,19 +55,10 @@ class RTree {
 
     struct Node * chooseSubtree(struct Node &node, struct BoundingBox &elem);
 
-    // delete
-    void condenseTree(struct Node &node);
+    // lookup
+    vector<struct BoundingBox *> findEntries(struct Node &node);
 
     struct Node * findLeaf(struct Node &node, struct BoundingBox * entry);
-
-    vector<struct BoundingBox *> findEntries(struct Node &node);
-    
-    struct Node deleteEntryi(struct Node &node, int i);
-
-    struct Node deleteEntry(struct Node &node, struct BoundingBox * elem);
-    struct Node deleteEntry2(struct Node &node, struct BoundingBox * elem);
-        struct Node * findLeaf2(struct Node &node, struct BoundingBox * entry);
-
 
     // insert:
     vector<struct Node > split(struct Node &node);
