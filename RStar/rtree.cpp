@@ -169,7 +169,7 @@ vector<struct Node::Node> RTree::split(struct Node &node){
     // for each axis
     for(int i = 0; i < node.entries[0].min.size(); i++){
         float sum = 0;
- //       cout << "size tree min: " << node.entries[0].min.size() << endl;
+        cout << "size tree min: " << node.entries[0].min.size() << endl;
         // for each axis compute sum of all margin-values of the different distributions
         int sumLower = 0;
         int sumUpper = 0;
@@ -178,56 +178,59 @@ vector<struct Node::Node> RTree::split(struct Node &node){
         sort(sortLower.begin(), sortLower.end(), [ i ](const struct BoundingBox& b1, const struct BoundingBox& b2){
             return b1.min[i] < b2.min[i];
         });
+        cout << "the lower sort is: " << endl;
+        for(auto &i : sortLower)
+            cout << i.min[0] << endl;
         vector<struct BoundingBox> sortUpper = node.entries;
         sort(sortUpper.begin(), sortUpper.end(), [ i ](const struct BoundingBox& b1, const struct BoundingBox& b2){
             return b1.max[i] < b2.max[i];
         });
+        cout << "the upper sort is: " << endl;
+        for(auto &i : sortUpper)
+            cout << i.max[0] << endl;
 
         // for each sort -> divide all M-2m+2 distributions into two groups
         for(int j = 0; j < distributions; j++){
 
             int entries = min_Children - 1 + j;
- //           cout << "entries: " << entries;
- //           cout << " distribution " << j << "\t " << distributions << "\t" << endl;
+            cout << "entries: " << entries;
+            cout << " distribution " << j << "\t " << distributions << "\t" << endl;
             // first group contains (m-1)+k entries
             vector<struct BoundingBox> lowerGroup1(&sortLower[0],&sortLower[entries]);
- //           cout<< "lower group1 :\n"; 
- //         for(auto &i : lowerGroup1)
- //               cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
-           // printTree(lowerGroup1);
+            cout<< "lower group1 :\n"; 
+          for(auto &i : lowerGroup1)
+                cout << i.min[0] << " " << i.min[1] << "\n" << i.max[0] << " " << i.max[1] << endl;
             vector<struct BoundingBox> upperGroup1(&sortUpper[0],&sortUpper[entries]);
- //           cout<< "upper group1 :\n"; 
-//            for(auto &i : upperGroup1)
-//                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
-           // printTree(upperGroup1);
+            cout<< "upper group1 :\n"; 
+            for(auto &i : upperGroup1)
+                cout << i.min[0] << " " << i.min[1] << "\n" << i.max[0] << " " << i.max[1] << endl;
             // second group contains remaining entries
             vector<struct BoundingBox> lowerGroup2(&sortLower[entries],&sortLower[sortLower.size()]);
-//            cout<< "lower group2 :\n"; 
-//            for(auto &i : lowerGroup2)
-//                cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
-           // printTree(lowerGroup2);
+            cout<< "lower group2 :\n"; 
+            for(auto &i : lowerGroup2)
+               cout << i.min[0] << " " << i.min[1] << "\t" << i.max[0] << " " << i.max[1] << endl;
             vector<struct BoundingBox> upperGroup2(&sortUpper[entries],&sortUpper[sortUpper.size()]);
- //           cout<< "upper group2 :\n"; 
- //           for(auto &i : upperGroup2)
- //               cout << i.min[0] << " " << i.min[1] << " " << i.max[0] << " " << i.max[1] << endl;
+            cout<< "upper group2 :\n"; 
+            for(auto &i : upperGroup2)
+                cout << i.min[0] << " " << i.min[1] << "\t" << i.max[0] << " " << i.max[1] << endl;
     
             // Compute sum of all margin-values of the different distributions
             sumLower = marginValue(lowerGroup1) + marginValue(lowerGroup2);
             sumUpper =  marginValue(upperGroup1) + marginValue(upperGroup2);
-//            cout << " sum " << sum; 
+            cout << " sum " << sum; 
             sum = sum +  marginValue(lowerGroup1) + marginValue(lowerGroup2) + marginValue(upperGroup1) + marginValue(upperGroup2);
- //           cout << "margin lower: " << sumLower << " margin upper: " << sumUpper << " sum " << sum;
+            cout << "margin lower: " << sumLower << " margin upper: " << sumUpper << " sum " << sum;
 
         }
 
           // choose axis with min margin sum as split axis, if found
-//            cout << "min sum " << minSum << endl;
+            cout << "min sum " << minSum << endl;
             if(sum < minSum){
                 minSum = sum;
                 axis = i;
-//                cout << "min sum ... " << minSum << " axis " << axis << endl;
+                cout << "min sum ... " << minSum << " axis " << axis << endl;
             } else {
-//                cout << "no sum ... " << sum << " axis " << i << endl;
+                cout << "no sum ... " << sum << " axis " << i << endl;
             }
     }
 
@@ -804,10 +807,12 @@ struct BoundingBox::BoundingBox RTree::randomBB(float from, float to, int dimens
     vector<float> max;
     for(int i = 0; i < dimension; i++){
         float m = randomFloat(from, to);
-        float ma = 0;
-        do{
-            ma = randomFloat(from, to);
-        } while (ma < m);
+        float ma = randomFloat(from, to);
+        if(ma < m){
+            float tmp = m;
+            m = ma;
+            ma = tmp;
+        }
         min.push_back(m);
         max.push_back(ma);
     }
@@ -908,6 +913,7 @@ void  RTree::test2(struct Node &root, int from, int to, int amount, int dimensio
     cout << endl << endl << "THE LEAF NODE IS: " << leafNode->id << endl << &leafNode << endl;
 }
 
+
 template <typename T, typename Compare> std::vector<std::size_t> RTree::sort_permutation(const std::vector<T>& vec,
     Compare compare) {
     std::vector<std::size_t> p(vec.size());
@@ -919,17 +925,14 @@ template <typename T, typename Compare> std::vector<std::size_t> RTree::sort_per
 
 template <typename T> void RTree::apply_permutation_in_place(std::vector<T>& vec, const std::vector<std::size_t>& p) {
     std::vector<bool> done(vec.size());
-    for (std::size_t i = 0; i < vec.size(); ++i)
-    {
-        if (done[i])
-        {
+    for (std::size_t i = 0; i < vec.size(); ++i){
+        if (done[i]){
             continue;
         }
         done[i] = true;
         std::size_t prev_j = i;
         std::size_t j = p[i];
-        while (i != j)
-        {
+        while (i != j){
             std::swap(vec[prev_j], vec[j]);
             done[j] = true;
             prev_j = j;
@@ -945,7 +948,6 @@ template <typename T> std::vector<T> RTree::apply_permutation(const std::vector<
     return sorted_vec;
 }
 
-bool wayToSort(int i, int j) { return i > j; }
 
 void RTree::init(int from, int to, int amount, int dimension){
     vector<float> min1 = {2,2};

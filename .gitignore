@@ -1,2 +1,4 @@
 .vscode
 *.o
+BBTree/main
+RStar/all
