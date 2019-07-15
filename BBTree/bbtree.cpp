@@ -4,7 +4,12 @@
 #include <bits/stdc++.h>
 #include <math.h>
 #include <queue> 
+#include <future>
+#include <thread>
 
+
+#include <cstdlib>
+#include <chrono>
 
 #include "bbtree.hpp"
 #include "bb.hpp"
@@ -639,51 +644,282 @@ struct BB * BBTree::findData(vector<float> &ist, vector<int> &delimiters, vector
 }
 
 
-vector<int> BBTree::completeRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position){
+// gives back the position of the BB in the bbvec that possibly contain elements in the range search query
+vector<int> BBTree::completeRangeQueryIndexes(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position){
     // abbruchBedingung Rekursion: Leaf level reached:
-    if(level == delimiters.size() - 1){
-        int index = 0;
-        vector<int> sol;
-        for(int i = 0; i < level; i++)
-            index += pow(3,i);
-        if(element1[delimiters[level]] <= ist[position + 0 - 1])
-            sol.push_back(position/(k-1) - index );
-        for(int i = 1; i < k; i++){
-            // check wether the delimiter Value of the level is larger than the value of e1 and smaller than e2 -> proceed with childNode
-            if(element1[delimiters[level]] < ist[position + 0 - 1] && element2[delimiters[level]] > ist[position + i - 1]){
-                sol.push_back(position/(k-1) - index + i);
+    vector<int> sol;
+    if(delimiters.size() == 0 || level == delimiters.size()-1){
+        cout<< "level == delimiters.size() -> Rekursionsabbruch;" << endl;
+            // if there are no delimiters by which we can split -> take the single BB at index 0
+        if(delimiters.size() == 0){
+            sol.push_back(0);
+            cout<< "pushback BB at index 0" << endl;
+        } else {
+            vector<int> childNodes;
+            float x = 0;
+            float y = 0;
+            if(element1[delimiters[level]] <= element2[delimiters[level]]){
+                x = element1[delimiters[level]];
+                y = element2[delimiters[level]];
+            } else{
+                y = element1[delimiters[level]];
+                x = element2[delimiters[level]];
+            }
+            cout << "x: " << x << " y: " << y << endl;
+            int lower = INT_MIN;
+        int upper = INT_MIN;
+        if(x <= ist[position] || y <= ist[position]){
+            cout<< "comparison 0: " << endl;
+            if(x <= ist[position]){
+                lower = 1;
+                cout << "lower: " << lower << endl;
+            }
+            if(y <= ist[position]){
+                upper = 1;
+                cout << "upper: " << upper << endl;
             }
         }
+        cout << "first  iteration" << endl;
+           // if(x <= ist[position]){
+             //   cout << "delimiters level: " << delimiters[level] << " ist pos: " << position << " " << ist[position] << endl;
+               // sol.push_back(position/(k-1) - index);
+            //}
+            for(int i = 1; i < k; i++){
+                // check wether the delimiter Value of the level is larger than the value of e1 and smaller than e2 -> proceed with childNode
+                if(x > ist[position + i - 1] || lower != INT_MIN && y > ist[position + i - 1]){
+                    if(x > ist[position + i - 1]){
+                        lower = i + 1;
+                        cout << "lower: " << lower << " i " << i << endl;
+                    } 
+                    if(lower != INT_MIN && y > ist[position + i - 1]){
+                        upper = i + 1;
+                        cout << "upper: " << upper << " i " << i << endl;
+                    }
+                    cout << "is larger " << "level: " << level << endl;
+                    // ?????
+                  //  sol.push_back(position/(k-1) - index + i);
+                } else { 
+                    cout << "is not larger"<< endl;
+                }
+            }
+            for(auto &i: childNodes)
+                cout << i << "\t";
+             for(int i = lower; i <= upper; i++){
+                childNodes.push_back(i);
+            }
+            for(auto &i: childNodes)
+                cout << i << "\t";
+            cout << "lower: " << lower << "upper: " << upper << endl;
+            cout << "iterarion terminated: lower: " << lower << "upper: " << upper << endl;
+            position = (position/(k-1) * k + childNodes[0]) * (k-1);
+            cout << "position " << position << endl;
+            int index = 0;
+            for(int i = 0; i <= level; i++){
+                cout << index << endl;
+                index += pow(3,i);
+            }
+            cout << "level: " << level <<  "index: " << index << "childNodes.size(): " << childNodes.size() << " childNodes: " << endl;
+            for(auto &i: childNodes)
+                cout << i << "\t";
+            for(int i = 0; i < childNodes.size()*(k-1); i++){
+                sol.push_back((position + i) - index * (k-1));
+            }    
+        }
+        cout << endl << "solution indexes: " << endl;
+        for(auto &i: sol)
+            cout << i << "\t";
         return sol;
     }
     // for each level: determine which child node to choose next until the last level of the array is reached
-//        cout << "LEVEL " << level << endl; 
-        // traverse the node
-        // for inner node in current level: if the delimiter is between the two values of e1 and e2 of the current dimension -> proceed with childNode
+        cout << "rekursion step \nLEVEL " << level << endl; 
+        cout<< "delimiters.size " << delimiters.size() << endl << "delimiters: " << endl;
+        for(auto &i : delimiters)
+            cout << i;
+            cout << endl;
+        cout<< "elements:" << endl;
+        for(int i = 0; i < element1.size(); i++){
+            cout << "e1: " << element1[i] << " e2: " << element2[i] << endl;
+        }
+        cout<< "IST:" << endl;
+        for(auto &i : ist){
+            cout << i << "\t";
+        }
+        cout << endl;
+    // traverse the node
+    // for inner node in current level: if the delimiter is between the two values of e1 and e2 of the current dimension -> proceed with childNode
+   
+   // x is the smaller number -> for the comparisons with the delimiter values
+        float x = 0;
+        float y = 0;
+        if(element1[delimiters[level]] <= element2[delimiters[level]]){
+            x = element1[delimiters[level]];
+            y = element2[delimiters[level]];
+        } else{
+            y = element1[delimiters[level]];
+            x = element2[delimiters[level]];
+        }
+        cout << "x: " << x << " y: " << y << "position: " << position << endl;
+   
     vector<int> childNodes;
-    if(element1[delimiters[level]] <= ist[position + 0 - 1])
-        childNodes.push_back(1);
+    int lower = INT_MIN;
+    int upper = INT_MIN;
+    if(x <= ist[position] || y <= ist[position]){
+        cout<< "comparison 0: " << endl;
+        if(x <= ist[position]){
+            lower = 1;
+            cout << "lower: " << lower << endl;
+        }
+        if(y <= ist[position]){
+            upper = 1;
+            cout << "upper: " << upper << endl;
+        }
+        cout << "proceed with childnode " << "delimiters level: " << delimiters[level] << " element 1 level: " << element1[delimiters[level]]<< "ist pos: " << ist[position] << endl;
+    }       
 
-//        cout << 0 << "\t" << element[delimiters[level]] << " " << ist[position] << endl;
     for(int i = 1; i < k; i++){
-//            cout << i << "\tchildnode: " << childNode << "\t" << element[delimiters[level]] << " " << ist[position + i - 1] << endl;
+     //       cout << i << "\tchildnode: " << childNode << "\t" << element[delimiters[level]] << " " << ist[position + i - 1] << endl;
         // check wether the delimiter Value of the level is larger than the value of e1 and smaller than e2 -> proceed with childNode
-        if(element1[delimiters[level]] < ist[position + 0 - 1] && element2[delimiters[level]] > ist[position + i - 1]){
-//              cout << "is larger " << childNode << endl;
-            childNodes.push_back(i + 1);
+        cout << "position value:  " << ist[position + i - 1] << " pos: " << position + i - 1 << endl;
+        if(x > ist[position + i - 1] || lower != INT_MIN && y > ist[position + i - 1]){
+            if(x > ist[position + i - 1]){
+                lower = i + 1;
+                cout << "lower: " << lower << endl;
+            } 
+            if(lower != INT_MIN && y > ist[position + i - 1]){
+                upper = i + 1;
+                cout << "upper: " << upper << endl;
+            }
+            cout << "proceed with childnode " << "delimiters level: " << delimiters[level] << "ist pos: " << ist[position] << endl;
+            cout << "is larger " << endl;
+        } else { 
+            cout << "is not larger"<< endl;
         }
     }
+    cout << "iterarion terminated: lower: " << lower << "upper: " << upper << endl;
+    for(int i = lower; i <= upper; i++){
+        childNodes.push_back(i);
+    }
+    cout<< "childNodes: " << endl;  
+    for(auto &i : childNodes)
+        cout << i << "\t";
+    cout << endl;
+
+    
     // after node in current level is explored -> jump to childNode in the next level
-//        cout <<  "position  " << position <<  " k-1 " << k-1 << " childnode " << childNode << " k " << k << endl;
-    position = (position/(k-1) * k + childNodes[0] + 1) * (k-1);
-//        cout << "position  " << position << endl;
-    vector<int> sol;
+        cout <<  "position  " << position <<  " k-1 " << position/(k-1) * k << " childnode " << childNodes[0] << " k " << k << endl;
     for(int i = 0; i < childNodes.size(); i++){
-        vector<int> tmp = completeRangeQuery(ist, delimiters, bbvec, element1, element2, level, position + childNodes[i]);
+        int childPosition = (position/(k-1) * k + childNodes[i]) * (k-1);
+        cout << "childPosition  " << childPosition << " childNodes size: " << childNodes.size() << endl;
+        vector<int> tmp = completeRangeQueryIndexes(ist, delimiters, bbvec, element1, element2, level + 1, childPosition);
         sol.insert(sol.end(), tmp.begin(), tmp.end());
     }
+    cout << endl << endl << "SOLUTION: " << endl;
+    for(auto &i : sol)
+        cout << i << "\t";
+        cout << endl;
     return sol;
 }
+
+ 
+//gets a potential BB that may contain relevant elemants for the complete/partial range query
+vector<vector<float> * > checkBB(int id, struct BB solBB, vector<float> * element1, vector<float> * element2){
+    cout << endl << endl << "THREAD ID: " << id << endl << endl << "issuper: " << solBB.isSuper;
+    cout << "element 1: " << endl;
+    for(auto &i : *element1)
+        cout << i << "\t";
+    cout << endl;
+    cout << "element 2: " << endl;
+    for(auto &i : *element2)
+        cout << i << "\t";
+    cout << endl;
+    cout << "tids: " << endl;
+        for(auto &k : solBB.tids){
+            for(auto &i : *k)
+                cout << i << "\t";
+            cout << endl;
+    }
+    vector<vector<float> * > solAdresses;
+    // if the passed BB is a super BB -> call a Thread for each normal BB it contains
+    if (solBB.isSuper){
+        cout << "isSuper" << endl;
+        int counter = id + 1;
+        for(auto &i : solBB.buckets){
+            future<vector<vector<float> * > > th  = async(checkBB, counter, i, element1, element2);
+            vector<vector<float> * > tmp = th.get();
+            solAdresses.insert(solAdresses.end(), tmp.begin(), tmp.end());
+            counter++;
+            cout << "solution adresses: " << endl;
+            for(auto &k : solAdresses){
+                for(auto &i : *k)
+                    cout << i << "\t";
+                cout << endl;
+            }
+        }
+    // else -> check for each element in the regular BB if it is part of the solution
+    } else {
+        cout << "isRegular" << endl;
+        // check for each element  of the current BB if it fits into the range of the elements
+        for(int j = 0; j < solBB.elements.size(); j++){
+            cout<< "element of solBB nr.: " << j << endl;
+            bool isPart = true;
+            for(int i = 0; i < element1->size(); i++){
+                
+                // check for each dimension if it fits into the values of the dimension of the elements
+                float x = 0;
+                float y = 0;
+                if(element1->at(i) <= element2->at(i)){
+                    x = element1->at(i);
+                    y = element2->at(i);
+                } else{
+                    y = element1->at(i);
+                    x = element2->at(i);
+                }
+                cout << "x: " << x << " y " << y << endl;
+                // if the current value is not part of the range -> don´t append it to the solution
+                cout << "solBB.elements[j][i] " << solBB.elements[j][i]  << endl;
+                if(solBB.elements[j][i] < x || solBB.elements[j][i] > y)
+                    isPart = false;
+                    cout << "isPart: " << isPart << endl;
+            }
+            if(isPart){
+                solAdresses.push_back(solBB.tids[j]);
+            }
+            cout << "solution adresses: " << endl;
+            for(auto &k : solAdresses){
+                for(auto &i : *k)
+                    cout << i << "\t";
+                cout << endl;
+            }
+        }
+    }
+    return solAdresses;
+
+}
+
+
+// finds a range query in a tree
+vector<vector<float> * > BBTree::completeRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2){
+    vector<int> bbVecIndexes = completeRangeQueryIndexes(ist, delimiters, bbvec, element1, element2, 0,0);
+    // create a thread for each BB to check if the elements inside are wanted:
+    // not wanted: if e.g. 3. dimension is not in between the 3. dimension of the two elements
+    vector<vector<float> * > solAdresses;
+    int counter = 0;
+    for(int i = 0; i < bbVecIndexes.size(); i++){
+        future<vector<vector<float> * > > th  = async(&checkBB, counter, bbvec[i], &element1, &element2);
+        // return the adresses of the points we are searching for
+        vector<vector<float> * > tmp = th.get();
+        solAdresses.insert(solAdresses.end(), tmp.begin(), tmp.end());
+        counter++;
+    }
+    cout << "solution adresses complete range query: " << endl;
+        for(auto &k : solAdresses){
+            for(auto &i : *k)
+                cout << i << "\t";
+            cout << endl;
+        }
+    return solAdresses;
+}
+
 
 
 vector<int> BBTree::partialRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position){
@@ -751,8 +987,8 @@ void BBTree::init(int from, int to, int dimensions, int amount){
     insert(ist, delimiters, bbvec, data[4]);
     printIst(ist, delimiters);
     printBBvec(bbvec);
-    cout<< endl << endl << "FIRST SUPER BB OVERFLOWS" << endl << endl;
-    insert(ist, delimiters, bbvec, data[4]);
+   // cout<< endl << endl << "FIRST SUPER BB OVERFLOWS" << endl << endl;
+   // insert(ist, delimiters, bbvec, data[4]);
     insert(ist, delimiters, bbvec, data[2]);
     insert(ist, delimiters, bbvec, data[4]);
     insert(ist, delimiters, bbvec, data[3]);
@@ -768,6 +1004,33 @@ void BBTree::init(int from, int to, int dimensions, int amount){
 
     printIst(ist, delimiters);
     printBBvec(bbvec);
+    
+    // TEST complete range query
+    // level: at which level we are in the inner search tree
+    // position: at which position we are in the bbtree array
+    cout<< endl << endl << "TEST complete Range Query: " << endl;
+    vector<float> is = {2,6,1,4,3,5,3,7};
+    vector<int> delimiter = {0,1};
+    vector<float> e1 = {2,1,1};
+    vector<float> e2 = {12,10,7};
+    completeRangeQuery(is, delimiter, bbvec, e1, e2);
+    vector<vector<float> > bbelems = getBBelements(bbvec);
+    cout << "all inserted elements in the bbvec:" << endl;
+    for(auto &j : bbelems){
+        for(auto &i : j)
+            cout << i << "\t";
+        cout << endl;
+    }
+
+
+  // TEST checkBB
+//  cout<< endl << endl << "TEST checkBB: " << endl;
+ // vector<vector<float> * > testCheckBB = checkBB(1, bbvec[0], &e1, &e2);
+ /* for(auto &i : testCheckBB){
+      for(auto &j : *i)
+        cout << j << "\t";
+    cout << endl;
+  }*/
 
 
     // TEST split vector
@@ -779,6 +1042,9 @@ void BBTree::init(int from, int to, int dimensions, int amount){
             cout << endl;
     }
 */
+
+
+
 
 
 

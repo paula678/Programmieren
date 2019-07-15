@@ -1,6 +1,6 @@
 #this target will compile all the files
 all:	main.o bbtree.o bb.o
-	g++ -o all main.o bbtree.o bb.o
+	g++ -o all main.o bbtree.o bb.o -pthread
 
 main.o: main.cpp bbtree.hpp
 	g++ -c main.cpp -std=c++14

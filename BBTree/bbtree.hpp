@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 
+
 #include "bb.hpp"
 
 using namespace std;
@@ -50,7 +51,8 @@ class BBTree {
 
     // search
     struct BB * findData(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element);
-    vector<int> completeRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position);
+    vector<int> completeRangeQueryIndexes(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position);
+    vector<vector<float> * > completeRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2);
     vector<int> partialRangeQuery(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position);
 
     // create functions 
