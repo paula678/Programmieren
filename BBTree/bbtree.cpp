@@ -646,6 +646,10 @@ struct BB * BBTree::findData(vector<float> &ist, vector<int> &delimiters, vector
 
 // gives back the position of the BB in the bbvec that possibly contain elements in the range search query
 vector<int> BBTree::completeRangeQueryIndexes(vector<float> &ist, vector<int> &delimiters, vector<struct BB> &bbvec, vector<float> &element1, vector<float> &element2, int level, int position){
+    cout << "ist: " << endl;
+    for(auto &i : ist)
+        cout << i << "\t";
+        cout << endl << "bbvec.size : " << bbvec.size() << endl;
     // abbruchBedingung Rekursion: Leaf level reached:
     vector<int> sol;
     if(delimiters.size() == 0 || level == delimiters.size()-1){
@@ -722,7 +726,8 @@ vector<int> BBTree::completeRangeQueryIndexes(vector<float> &ist, vector<int> &d
             for(auto &i: childNodes)
                 cout << i << "\t";
             for(int i = 0; i < childNodes.size()*(k-1); i++){
-                sol.push_back((position + i) - index * (k-1));
+                if(i%2 == 0)
+                    sol.push_back((position + i)/(k-1) - index);
             }    
         }
         cout << endl << "solution indexes: " << endl;
@@ -842,12 +847,12 @@ vector<vector<float> * > checkBB(int id, struct BB solBB, vector<float> * elemen
     // if the passed BB is a super BB -> call a Thread for each normal BB it contains
     if (solBB.isSuper){
         cout << "isSuper" << endl;
-        int counter = id + 1;
+        int counter = 0;
         for(auto &i : solBB.buckets){
-            future<vector<vector<float> * > > th  = async(checkBB, counter, i, element1, element2);
+            future<vector<vector<float> * > > th  = async(&checkBB, id, i, element1, element2);
             vector<vector<float> * > tmp = th.get();
             solAdresses.insert(solAdresses.end(), tmp.begin(), tmp.end());
-            counter++;
+            //counter++;
             cout << "solution adresses: " << endl;
             for(auto &k : solAdresses){
                 for(auto &i : *k)
@@ -904,8 +909,10 @@ vector<vector<float> * > BBTree::completeRangeQuery(vector<float> &ist, vector<i
     // not wanted: if e.g. 3. dimension is not in between the 3. dimension of the two elements
     vector<vector<float> * > solAdresses;
     int counter = 0;
+    cout << "bbvec size" << bbvec.size() << endl;
     for(int i = 0; i < bbVecIndexes.size(); i++){
-        future<vector<vector<float> * > > th  = async(&checkBB, counter, bbvec[i], &element1, &element2);
+        cout << endl << endl << "bbvec nr. : " << i << endl;
+        future<vector<vector<float> * > > th  = async(&checkBB, counter, bbvec[bbVecIndexes[i]], &element1, &element2);
         // return the adresses of the points we are searching for
         vector<vector<float> * > tmp = th.get();
         solAdresses.insert(solAdresses.end(), tmp.begin(), tmp.end());
@@ -1011,9 +1018,9 @@ void BBTree::init(int from, int to, int dimensions, int amount){
     cout<< endl << endl << "TEST complete Range Query: " << endl;
     vector<float> is = {2,6,1,4,3,5,3,7};
     vector<int> delimiter = {0,1};
-    vector<float> e1 = {2,1,1};
+    vector<float> e1 = {1,4,1};
     vector<float> e2 = {12,10,7};
-    completeRangeQuery(is, delimiter, bbvec, e1, e2);
+    completeRangeQuery(ist, delimiter, bbvec, e1, e2);
     vector<vector<float> > bbelems = getBBelements(bbvec);
     cout << "all inserted elements in the bbvec:" << endl;
     for(auto &j : bbelems){
@@ -1021,6 +1028,7 @@ void BBTree::init(int from, int to, int dimensions, int amount){
             cout << i << "\t";
         cout << endl;
     }
+    cout << "size: " << bbvec.size() << endl;
 
 
   // TEST checkBB

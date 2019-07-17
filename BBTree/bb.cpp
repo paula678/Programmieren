@@ -58,7 +58,7 @@ int BB::chooseSuperChild(vector<float> &element, int k){
 
 // print a regular
 void BB::printRegular(){
-    cout<< endl << "REGULAR BB: ";
+    cout<< endl << "REGULAR BB: " << endl;
     for(auto &j : elements){
         for(auto &k : j)
             cout<< k << "\t";
